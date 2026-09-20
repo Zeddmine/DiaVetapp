@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Submissions from Owners & Veterinarians
+    match /submissions/{submissionId} {
+      allow read, write: if true;
+    }
+    
+    // Contact messages to contact@diavet.com / forwarded to mine.mine0100@gmail.com
+    match /contact_messages/{messageId} {
+      allow read, write: if true;
+    }
+    
+    // Community ideas & suggestions
+    match /community_ideas/{ideaId} {
+      allow read, write: if true;
+    }
+    
+    // Adoption listings & requests
+    match /adoptions/{adoptionId} {
+      allow read, write: if true;
+    }
+  }
+}

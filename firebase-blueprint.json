@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "submissions": {
+      "title": "Submissions",
+      "description": "Leads and questionnaires submitted by pet owners and veterinarians",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["owner", "vet"] },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "wilaya": { "type": "string" },
+        "commune": { "type": "string" },
+        "petNameOrClinic": { "type": "string" },
+        "animalTypesOrSpecialties": { "type": "array", "items": { "type": "string" } },
+        "vipCode": { "type": "string" },
+        "annualBudgetOrPatients": { "type": "string" },
+        "challenges": { "type": "array", "items": { "type": "string" } },
+        "expectedFeatures": { "type": "array", "items": { "type": "string" } },
+        "submittedAt": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["role", "name", "vipCode"]
+    },
+    "contact_messages": {
+      "title": "Contact Messages",
+      "description": "Official inquiries sent to contact@diavet.com and forwarded to mine.mine0100@gmail.com",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "forwardedTo": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email", "message"]
+    }
+  }
+}
