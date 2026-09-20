@@ -902,6 +902,13 @@ export default function OwnerQuestionnaire({
               </div>
 
               <div className="space-y-4">
+                {userProfile?.petName && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>{isRtl ? "تم نقل اسم وسلالة الحيوان تلقائياً من تسجيلك دون الحاجة لإعادة الكتابة" : "Nom et profil de l'animal synchronisés depuis votre inscription"}</span>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-xs font-bold text-slate-300 block mb-1.5">
                     {isRtl ? 'اسم الحيوان الأليف *' : 'Prénom ou nom de l\'animal *'}
@@ -1578,6 +1585,13 @@ export default function OwnerQuestionnaire({
                   {isRtl ? 'أدخل ولايتك، اسمك ورقم هاتفك، ويمكنك أيضاً مشاركتنا أي فكرة لتطوير DiaVet.' : 'Renseignez vos coordonnées et partagez librement vos idées pour l\'écosystème DiaVet DZ.'}
                 </p>
               </div>
+
+              {userProfile?.name && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{isRtl ? "تمت مزامنة اسمك ورقم هاتفك وولايتك تلقائياً من تسجيلك دون الحاجة لإعادة كتابتها" : "Nom, téléphone et Wilaya déjà synchronisés depuis votre inscription DiaVet"}</span>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

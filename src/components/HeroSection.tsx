@@ -51,13 +51,15 @@ interface HeroSectionProps {
   onStart: () => void;
   onExploreVets: () => void;
   onOpenDirectory: () => void;
+  onOpenVideos?: () => void;
 }
 
 export default function HeroSection({
   currentLang,
   onStart,
   onExploreVets,
-  onOpenDirectory
+  onOpenDirectory,
+  onOpenVideos
 }: HeroSectionProps) {
   const t = translations[currentLang];
   const isRtl = currentLang === 'ar';
@@ -125,6 +127,16 @@ export default function HeroSection({
                 <MapPin className="w-4 h-4 text-emerald-400" />
                 <span>{t.navEmergencies}</span>
               </button>
+
+              {onOpenVideos && (
+                <button
+                  id="hero-videos-btn"
+                  onClick={onOpenVideos}
+                  className="w-full sm:w-auto px-6 py-4 rounded-2xl font-bold text-base text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 backdrop-blur-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <span>DiaVet TV 🎬</span>
+                </button>
+              )}
             </div>
 
             {/* Social Proof / Security indicators */}

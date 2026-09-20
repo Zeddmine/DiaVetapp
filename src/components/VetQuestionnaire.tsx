@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Language, VetAnswers } from '../types';
+import { Language, VetAnswers, UserProfile } from '../types';
 import { translations } from '../data/translations';
 import { ALGERIAN_WILAYAS, CLINIC_PHOTOS } from '../data/mockData';
 import { recordVetSubmission, generateVipCode } from '../services/adminDb';
@@ -15,6 +15,7 @@ import DiaVetLogo from './DiaVetLogo';
 
 interface VetQuestionnaireProps {
   currentLang: Language;
+  userProfile?: Partial<UserProfile>;
   onFinish: (answers: VetAnswers) => void;
   onGoHome: () => void;
   onPreviewPortal: () => void;
@@ -22,6 +23,7 @@ interface VetQuestionnaireProps {
 
 export default function VetQuestionnaire({
   currentLang,
+  userProfile,
   onFinish,
   onGoHome,
   onPreviewPortal
@@ -32,11 +34,11 @@ export default function VetQuestionnaire({
   const [step, setStep] = useState<number>(0);
   const totalSteps = 7;
 
-  // ANSWERS STATE: Started clean without pre-selected defaults!
+  // ANSWERS STATE: Synchronized with userProfile to avoid repeating questions
   const [answers, setAnswers] = useState<VetAnswers>({
     practiceType: '',
-    clinicName: '',
-    vetFullName: '',
+    clinicName: userProfile?.clinicName || '',
+    vetFullName: userProfile?.name || '',
     specialties: [],
     availableEquipment: [],
     dailyPatientsCount: '',
@@ -44,9 +46,9 @@ export default function VetQuestionnaire({
     currentTool: '',
     majorChallengesDz: [],
     desiredFeatures: [],
-    wilaya: '16 - Alger',
-    commune: '',
-    phoneContact: '',
+    wilaya: userProfile?.wilaya || '16 - Alger',
+    commune: userProfile?.commune || '',
+    phoneContact: userProfile?.phone || '',
     userSuggestions: ''
   });
 
@@ -667,6 +669,13 @@ export default function VetQuestionnaire({
                 </div>
               </div>
 
+              {userProfile?.name && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{isRtl ? "تمت تعبئة بيانات الدكتور والعيادة تلقائياً من حسابك DiaVet" : "Informations du titulaire et de la clinique pré-remplies depuis votre compte DiaVet"}</span>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs font-bold text-slate-300 block mb-1.5">
                   {isRtl ? "اسم العيادة أو المصحة البيطرية *" : "Nom du cabinet ou de la clinique *"}
@@ -941,6 +950,13 @@ export default function VetQuestionnaire({
                 {isRtl ? "ستستعمل هذه المعلومات في الإدراج الرسمي للدليل البيطري الوطني." : "Ces coordonnées serviront au référencement officiel dans l'annuaire."}
               </p>
             </div>
+
+            {userProfile?.phone && (
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{isRtl ? "تمت مزامنة رقم الهاتف والولاية مباشرة من حسابك دون تكرار" : "Numéro de téléphone et Wilaya synchronisés depuis votre inscription DiaVet"}</span>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div>

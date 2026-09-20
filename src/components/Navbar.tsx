@@ -6,11 +6,13 @@ import { translations } from '../data/translations';
 import { 
   Menu, X, Sun, Moon, Smartphone, Monitor, Instagram, 
   Award, Heart, ShoppingBag, Lightbulb, 
-  FileEdit, Lock, Stethoscope, Cloud
+  FileEdit, Lock, Stethoscope, Cloud,
+  Video, FileSpreadsheet, User, Sparkles, LogOut
 } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
 import DiaVetLogo from './DiaVetLogo';
 import AudioCyberHud from './AudioCyberHud';
+import { PWAInstallButton } from './PWAInstallButton';
 import { DIAVET_OFFICIAL_EMAIL } from '../services/firebase';
 
 interface NavbarProps {
@@ -26,10 +28,16 @@ interface NavbarProps {
   hasCompletedQuestionnaire?: boolean;
   userRole?: 'owner' | 'vet';
   isOwner?: boolean;
+  userName?: string;
+  userPoints?: number;
+  onOpenExcel?: () => void;
   onLockedFeatureClick?: (featureName: string) => void;
   onResetRegistration?: () => void;
   onOpenContact?: () => void;
   onOpenDriveSync?: () => void;
+  isRegistered?: boolean;
+  onOpenAuth?: () => void;
+  onLogout?: () => void;
 }
 
 export default function Navbar({
@@ -45,10 +53,16 @@ export default function Navbar({
   hasCompletedQuestionnaire = false,
   userRole = 'owner',
   isOwner = false,
+  userName,
+  userPoints,
+  onOpenExcel,
   onLockedFeatureClick,
   onResetRegistration,
   onOpenContact,
-  onOpenDriveSync
+  onOpenDriveSync,
+  isRegistered = false,
+  onOpenAuth,
+  onLogout
 }: NavbarProps) {
   const t = translations[currentLang] || translations.fr;
   const isRtl = currentLang === 'ar';
@@ -232,13 +246,88 @@ export default function Navbar({
             >
               {t.navEmergencies}
             </button>
+
+            {/* Vidéos Masterclasses DiaVet TV (En Développement) */}
+            <button
+              id="nav-videos-btn"
+              onClick={() => {
+                soundEngine.playCyberClick();
+                onNavigate('videos');
+              }}
+              className={`hover:text-amber-300 transition-colors py-1 cursor-pointer flex items-center gap-1.5 ${
+                activeScreen === 'videos' ? 'text-amber-300 font-bold border-b-2 border-amber-400' : ''
+              }`}
+            >
+              <Video className="w-3.5 h-3.5 text-amber-400" />
+              <span>Vidéos TV 🎬</span>
+              <span className="text-[9px] font-black px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                {isRtl ? 'قيد التطوير' : 'En dev'}
+              </span>
+            </button>
           </nav>
 
           {/* Right Action Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             
-            {/* FUTURISTIC CYBER AUDIO HUD */}
-            <AudioCyberHud currentLang={currentLang} />
+            {/* Real Connected User Chip */}
+            {isRegistered && userName && (
+              <button
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  onNavigate('profile');
+                }}
+                title="Accéder à mon Profil Réel DiaVet"
+                className="hidden lg:inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-800/80 border border-white/10 hover:border-cyan-400/40 text-xs text-white transition-all cursor-pointer shadow-inner"
+              >
+                <div className="w-5 h-5 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-black text-[10px]">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+                <span className="font-bold truncate max-w-[100px]">{userName}</span>
+                {typeof userPoints === 'number' && (
+                  <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black">
+                    {userPoints} pts
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Logout Button in Desktop Navbar */}
+            {isRegistered && onLogout && (
+              <button
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  onLogout();
+                }}
+                title={isRtl ? "تسجيل الخروج الرسمي من DiaVet" : "Se déconnecter"}
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 transition-all hover:scale-105 shrink-0 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                <span className="hidden md:inline">{isRtl ? "خروج" : "Déconnexion"}</span>
+              </button>
+            )}
+
+            {/* Inscription / Connexion Button (Visible when disconnected) */}
+            {!isRegistered && onOpenAuth && (
+              <button
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  onOpenAuth();
+                }}
+                title={isRtl ? "تسجيل الدخول أو فتح حساب حقيقي" : "Se connecter ou créer un compte vérifié"}
+                className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-md shadow-cyan-500/25 transition-all hover:scale-105 shrink-0 cursor-pointer whitespace-nowrap"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-cyan-200 animate-pulse shrink-0" />
+                <span>{isRtl ? "دخول / تسجيل" : "Connexion"}</span>
+              </button>
+            )}
+
+            {/* PWA INSTALL BUTTON (hidden on small mobile, available in drawer) */}
+            <PWAInstallButton className="hidden sm:inline-flex" />
+
+            {/* FUTURISTIC CYBER AUDIO HUD (hidden on mobile, available in drawer) */}
+            <div className="hidden lg:inline-flex">
+              <AudioCyberHud currentLang={currentLang} />
+            </div>
 
             {/* Official Contact Button */}
             {onOpenContact && (
@@ -248,10 +337,25 @@ export default function Navbar({
                   onOpenContact();
                 }}
                 title="Contact officiel : contact@diavet.com"
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 transition-all hover:scale-105 shrink-0 cursor-pointer"
+                className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 transition-all hover:scale-105 shrink-0 cursor-pointer"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>contact@diavet.com</span>
+              </button>
+            )}
+
+            {/* Official Excel Leads Export Button — Reserved strictly for Owner */}
+            {onOpenExcel && isOwner && (
+              <button
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  onOpenExcel();
+                }}
+                title="Exporter le Registre Officiel des Utilisateurs en Excel (.xls / .csv)"
+                className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-300 border border-emerald-400/40 transition-all hover:scale-105 shrink-0 cursor-pointer shadow-sm shadow-emerald-500/10"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span className="hidden sm:inline">Excel</span>
               </button>
             )}
 
@@ -263,11 +367,10 @@ export default function Navbar({
                   onOpenDriveSync();
                 }}
                 title="Transférer index.html sur Google Drive (Réservé Propriétaire)"
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 hover:from-emerald-500/30 hover:to-cyan-500/30 text-emerald-300 border border-emerald-400/40 transition-all hover:scale-105 shrink-0 cursor-pointer shadow-sm shadow-emerald-500/10"
+                className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 hover:from-emerald-500/30 hover:to-cyan-500/30 text-emerald-300 border border-emerald-400/40 transition-all hover:scale-105 shrink-0 cursor-pointer shadow-sm shadow-emerald-500/10"
               >
                 <Cloud className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span className="hidden sm:inline">Google Drive</span>
-                <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-400/30 text-emerald-200">1-Clic</span>
+                <span className="hidden sm:inline">Drive</span>
               </button>
             )}
 
@@ -277,15 +380,15 @@ export default function Navbar({
               target="_blank"
               rel="noopener noreferrer"
               title="Instagram : @dia__vet"
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/30 transition-all hover:scale-105 shrink-0"
+              className="hidden 2xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/30 transition-all hover:scale-105 shrink-0"
             >
               <Instagram className="w-3.5 h-3.5" />
               <span>@dia__vet</span>
             </a>
 
-            {/* Language Selector FR / EN / AR */}
-            <div className="flex bg-slate-900/80 dark:bg-slate-900/80 light:bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-white/10 text-xs font-bold">
-              {(['fr', 'en', 'ar'] as Language[]).map((lang) => (
+            {/* Language Selector FR / EN / AR - Compact & Never Overflowing */}
+            <div className="flex bg-slate-900/80 dark:bg-slate-900/80 light:bg-slate-100 p-0.5 rounded-lg border border-white/10 text-xs font-bold shrink-0">
+              {(['fr', 'ar', 'en'] as Language[]).map((lang) => (
                 <button
                   key={lang}
                   id={`lang-btn-${lang}`}
@@ -293,13 +396,13 @@ export default function Navbar({
                     soundEngine.playCyberClick();
                     onSelectLang(lang);
                   }}
-                  className={`px-2 py-1 rounded-lg transition-all uppercase cursor-pointer ${
+                  className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md transition-all uppercase cursor-pointer text-[10px] sm:text-xs ${
                     currentLang === lang
-                      ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20 font-black'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  {lang === 'ar' ? 'العربية' : lang.toUpperCase()}
+                  {lang === 'ar' ? 'عربي' : lang.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -312,7 +415,7 @@ export default function Navbar({
                 onToggleTheme();
               }}
               aria-label="Changer le thème"
-              className="p-2 sm:p-2.5 rounded-xl border border-white/10 bg-slate-900/60 hover:bg-slate-800 transition-colors text-slate-300 cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-xl border border-white/10 bg-slate-900/60 hover:bg-slate-800 transition-colors text-slate-300 cursor-pointer shrink-0"
             >
               {currentTheme === 'dark' ? (
                 <Sun className="w-4 h-4 text-amber-400" />
@@ -329,7 +432,7 @@ export default function Navbar({
                 onToggleIphoneView();
               }}
               title={isIphoneView ? t.switchFull : t.switchDevice}
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-all cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-all cursor-pointer shrink-0"
             >
               {isIphoneView ? (
                 <>
@@ -344,14 +447,15 @@ export default function Navbar({
               )}
             </button>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - Always visible on mobile */}
             <button
               id="mobile-menu-toggle-btn"
               onClick={() => {
                 soundEngine.playCyberClick();
                 setMobileMenuOpen(!mobileMenuOpen);
               }}
-              className="p-2 rounded-xl border border-white/10 text-slate-300 xl:hidden cursor-pointer"
+              aria-label="Menu principal"
+              className="p-1.5 sm:p-2 rounded-xl border border-white/15 bg-slate-900/80 hover:bg-slate-800 text-slate-200 xl:hidden cursor-pointer shrink-0"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -362,7 +466,75 @@ export default function Navbar({
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="xl:hidden border-t border-white/10 bg-slate-950/95 backdrop-blur-xl px-4 py-6 space-y-3 animate-in slide-in-from-top duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="xl:hidden border-t border-white/10 bg-slate-950/98 backdrop-blur-2xl px-4 py-5 space-y-3 animate-in slide-in-from-top duration-200 max-h-[85vh] overflow-y-auto" dir={isRtl ? 'rtl' : 'ltr'}>
+          
+          {/* Mobile Auth Banner: Connected or Disconnected */}
+          {!isRegistered ? (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-blue-950/70 border border-cyan-500/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-cyan-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+                  {isRtl ? "فضاء DiaVet للأعضاء" : "Espace Membre DiaVet"}
+                </span>
+                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-300 border border-cyan-400/30">
+                  Non connecté
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300">
+                {isRtl ? "سجل حسابك لتفعيل الاستبيان والتبني وحصد النقاط" : "Connectez-vous ou créez votre compte pour accéder à toutes les fonctionnalités."}
+              </p>
+              {onOpenAuth && (
+                <button
+                  onClick={() => {
+                    soundEngine.playCyberClick();
+                    setMobileMenuOpen(false);
+                    onOpenAuth();
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 cursor-pointer"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>{isRtl ? "تسجيل الدخول / فتح حساب جديد" : "Connexion / Créer un compte"}</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-slate-900 border border-white/15 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white flex items-center justify-center font-black text-sm">
+                  {userName ? userName.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white leading-tight">{userName}</p>
+                  <p className="text-[10px] text-cyan-400 font-medium">
+                    {userRole === 'vet' ? '🩺 Vétérinaire PRO' : '🐾 Propriétaire d\'animaux'}
+                    {typeof userPoints === 'number' && ` • ${userPoints} pts`}
+                  </p>
+                </div>
+              </div>
+              {onLogout && (
+                <button
+                  onClick={() => {
+                    soundEngine.playCyberClick();
+                    setMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>{isRtl ? "خروج" : "Déconnexion"}</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Sound Control & PWA inside Mobile Menu */}
+          <div className="p-3 rounded-2xl bg-slate-900/60 border border-white/10 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-300">Bande-son d'ambiance</span>
+              <AudioCyberHud currentLang={currentLang} />
+            </div>
+            <PWAInstallButton className="w-full justify-center" compactOnMobile={false} />
+          </div>
           <nav className="flex flex-col space-y-2 text-sm font-semibold text-slate-200">
             <button
               onClick={() => { 
@@ -470,6 +642,44 @@ export default function Navbar({
             >
               {t.navEmergencies}
             </button>
+
+            {/* MOBILE: DiaVet TV Vidéos (En Développement) */}
+            <button
+              onClick={() => {
+                soundEngine.playCyberClick();
+                onNavigate('videos');
+                setMobileMenuOpen(false);
+              }}
+              className="text-left py-2.5 px-3 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/30 font-bold transition-colors flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Video className="w-4 h-4 text-amber-400" />
+                <span>🎬 DiaVet TV — Tutoriels Vidéos DZ</span>
+              </div>
+              <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-1.5 py-0.5 rounded uppercase">
+                {isRtl ? 'قيد التطوير' : 'En dev'}
+              </span>
+            </button>
+
+            {/* MOBILE: Registre Excel for Owner */}
+            {onOpenExcel && isOwner && (
+              <button
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  setMobileMenuOpen(false);
+                  onOpenExcel();
+                }}
+                className="text-left py-2.5 px-3 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold transition-colors flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <span>📊 Télécharger Registre Excel (.xls)</span>
+                </div>
+                <span className="text-[10px] bg-emerald-400 text-slate-950 font-black px-1.5 py-0.5 rounded">
+                  Propriétaire
+                </span>
+              </button>
+            )}
             
             {onOpenContact && (
               <button

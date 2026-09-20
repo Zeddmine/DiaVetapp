@@ -156,6 +156,137 @@ export function generateMailtoForLead(lead: AdminLead): string {
   return `mailto:${OWNER_TARGET_EMAIL}?cc=${DIAVET_OFFICIAL_EMAIL}&subject=${subject}&body=${body}`;
 }
 
+export function recordRegistrationLead(profile: Partial<UserProfile>, role: 'owner' | 'vet'): AdminLead {
+  const vipCode = profile.vipCode || generateVipCode(role, profile.wilaya || '16 - Alger');
+  const newLead: AdminLead = {
+    id: 'user-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+    role: role,
+    name: profile.name || (role === 'vet' ? 'Dr. Vétérinaire Inscrit' : 'Propriétaire DiaVet'),
+    phone: profile.phone || 'Non renseigné',
+    wilaya: profile.wilaya || '16 - Alger',
+    commune: profile.commune || 'Centre',
+    petNameOrClinic: role === 'vet' ? (profile.clinicName || 'Cabinet Vétérinaire') : (profile.petName || profile.petType || 'Compagnon'),
+    animalTypesOrSpecialties: role === 'vet' ? ['Praticien Vétérinaire Algérie'] : [profile.petType || 'Animal de compagnie'],
+    vipCode: vipCode,
+    annualBudgetOrPatients: role === 'vet' ? 'Cabinet Actif DZ' : 'Budget Standard',
+    challenges: ['Enregistré via inscription directe DiaVet DZ'],
+    expectedFeatures: ['Pass VIP débloqué', 'Accès Carnet & Urgences'],
+    submittedAt: new Date().toLocaleString('fr-DZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
+    rawDetails: profile
+  };
+
+  const existing = getAdminLeads();
+  // Don't duplicate if same name and phone
+  const filtered = existing.filter(l => !(l.name === newLead.name && l.phone === newLead.phone && l.name !== 'Propriétaire Anonyme'));
+  const updated = [newLead, ...filtered];
+  saveAdminLeads(updated);
+
+  syncSubmissionToFirestore({
+    id: newLead.id,
+    role: newLead.role,
+    name: newLead.name,
+    phone: newLead.phone,
+    wilaya: newLead.wilaya,
+    commune: newLead.commune,
+    petNameOrClinic: newLead.petNameOrClinic,
+    animalTypesOrSpecialties: newLead.animalTypesOrSpecialties,
+    vipCode: newLead.vipCode,
+    annualBudgetOrPatients: newLead.annualBudgetOrPatients,
+    challenges: newLead.challenges,
+    expectedFeatures: newLead.expectedFeatures,
+    submittedAt: newLead.submittedAt,
+    rawDetails: profile
+  }).catch(err => console.warn('Background Firestore sync caught:', err));
+
+  return newLead;
+}
+
+export function exportLeadsToExcel(leads: AdminLead[]): void {
+  const tableRows = leads.map((l, idx) => `
+    <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px;">${l.id}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px; font-weight: bold; color: ${l.role === 'vet' ? '#059669' : '#0284c7'};">${l.role === 'vet' ? '🩺 Vétérinaire PRO' : '🐾 Propriétaire'}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px; font-weight: bold;">${l.name}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px; mso-number-format:'\\@';">${l.phone}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px;">${l.wilaya}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px;">${l.commune || '-'}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px; font-weight: bold;">${l.petNameOrClinic}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px;">${(l.animalTypesOrSpecialties || []).join(', ')}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #d97706;">${l.vipCode}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px;">${l.annualBudgetOrPatients || '-'}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px;">${(l.challenges || []).join(' | ')}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px;">${(l.expectedFeatures || []).join(' | ')}</td>
+      <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px; color: #64748b;">${l.submittedAt}</td>
+    </tr>
+  `).join('');
+
+  const excelHtml = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+      <!--[if gte mso 9]>
+      <xml>
+        <x:ExcelWorkbook>
+          <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+              <x:Name>DiaVet Inscrits DZ</x:Name>
+              <x:WorksheetOptions>
+                <x:DisplayGridlines/>
+              </x:WorksheetOptions>
+            </x:ExcelWorksheet>
+          </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+      </xml>
+      <![endif]-->
+      <style>
+        th { background-color: #047857; color: #ffffff; font-family: sans-serif; font-size: 12px; font-weight: bold; border: 1px solid #065f46; padding: 10px; }
+      </style>
+    </head>
+    <body>
+      <h2 style="font-family: sans-serif; color: #0f172a;">DiaVet Algérie — Registre Officiel des Utilisateurs & Inscriptions (${new Date().toLocaleDateString('fr-DZ')})</h2>
+      <p style="font-family: sans-serif; font-size: 12px; color: #475569;">Total inscrits: ${leads.length} membres | Exporté depuis DiaVet Santé Animale DZ</p>
+      <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Type de Membre</th>
+            <th>Nom & Prénom</th>
+            <th>Téléphone DZ</th>
+            <th>Wilaya</th>
+            <th>Commune</th>
+            <th>Animal / Clinique</th>
+            <th>Espèces / Spécialités</th>
+            <th>Code Pass VIP</th>
+            <th>Budget / Patients</th>
+            <th>Défis Algérie</th>
+            <th>Besoins Prioritaires</th>
+            <th>Date d'Inscription</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `diavet_registre_inscrits_${new Date().toISOString().split('T')[0]}.xls`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 export function exportLeadsToCsv(leads: AdminLead[]): void {
   const headers = [
     'ID',

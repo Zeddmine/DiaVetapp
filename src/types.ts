@@ -13,7 +13,8 @@ export type AppScreen =
   | 'profile'
   | 'adoption'
   | 'marketplace'
-  | 'ideas';
+  | 'ideas'
+  | 'videos';
 
 export interface Badge {
   id: string;

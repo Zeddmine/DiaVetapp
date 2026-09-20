@@ -1,6 +1,6 @@
 import { Language } from '../types';
 import { translations } from '../data/translations';
-import { Heart, Instagram, Mail, Database, ShieldCheck } from 'lucide-react';
+import { Heart, Instagram, Mail, Database, ShieldCheck, MessageCircle, Video } from 'lucide-react';
 import DiaVetLogo from './DiaVetLogo';
 import { DIAVET_OFFICIAL_EMAIL } from '../services/firebase';
 
@@ -55,6 +55,16 @@ export default function Footer({ currentLang, userRole = 'owner', onNavigate, on
                 <Instagram className="w-4 h-4 text-pink-400" />
                 <span>@dia__vet</span>
               </a>
+
+              <a
+                href="https://wa.me/213550000000?text=Bonjour%20DiaVet%20Alg%C3%A9rie%20%F0%9F%87%A9%F0%9F%87%BF%20Je%20vous%20contacte%20depuis%20la%20plateforme"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all hover:scale-105 cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-400" />
+                <span>WhatsApp (Waa) DZ</span>
+              </a>
             </div>
 
             <div className="flex items-center gap-3 text-xs text-emerald-400 font-semibold pt-1">
@@ -105,6 +115,14 @@ export default function Footer({ currentLang, userRole = 'owner', onNavigate, on
                   className="hover:text-cyan-400 transition-colors cursor-pointer"
                 >
                   📖 {t.navArticles || "Conseils & Articles Vétérinaires"}
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => onNavigate('videos')} 
+                  className="hover:text-cyan-400 transition-colors cursor-pointer"
+                >
+                  🎬 {currentLang === 'ar' ? "فيديوهات DiaVet TV وتدريب" : "DiaVet TV & Vidéos Masterclasses"}
                 </button>
               </li>
               <li>

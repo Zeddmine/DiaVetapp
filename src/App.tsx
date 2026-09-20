@@ -26,6 +26,10 @@ import LockedGiftModal from './components/LockedGiftModal';
 import GiftRewardCelebrationModal from './components/GiftRewardCelebrationModal';
 import OfficialContactModal from './components/OfficialContactModal';
 import DriveSyncModal from './components/DriveSyncModal';
+import ExcelLeadsModal from './components/ExcelLeadsModal';
+import DiaVetTvSection from './components/DiaVetTvSection';
+import WhatsAppSupportButton from './components/WhatsAppSupportButton';
+import { recordRegistrationLead } from './services/adminDb';
 import { translations } from './data/translations';
 import { INITIAL_BADGES, INITIAL_MILESTONES, DEFAULT_USER_PROFILE } from './data/badgeData';
 import { INITIAL_ARTICLES } from './data/articlesData';
@@ -55,13 +59,30 @@ export default function App() {
   const [activeScreen, setActiveScreen] = useState<AppScreen>('home');
   const [isIphoneView, setIsIphoneView] = useState<boolean>(false);
 
-  // Gated Registration State - Visitors must register at the start to gain access
+  // Clean Global Reset: Ensure all users start cleanly disconnected as requested
   const [isRegistered, setIsRegistered] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('diavet_registered');
-      return saved === 'true';
+      if (!localStorage.getItem('diavet_clean_reset_v2')) {
+        localStorage.removeItem('diavet_registered');
+        localStorage.removeItem('diavet_completed_questionnaire');
+        localStorage.setItem('diavet_clean_reset_v2', 'true');
+        return false;
+      }
+      return localStorage.getItem('diavet_registered') === 'true';
     } catch {
       return false;
+    }
+  });
+
+  // Auth / Registration Modal state - Direct registration on entry if not registered
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(() => {
+    try {
+      if (!localStorage.getItem('diavet_clean_reset_v2')) {
+        return true;
+      }
+      return localStorage.getItem('diavet_registered') !== 'true';
+    } catch {
+      return true;
     }
   });
 
@@ -106,11 +127,9 @@ export default function App() {
     }
   });
 
-  // Owner privilege check (1-Click Google Drive tools reserved exclusively for owner)
+  // Owner privilege check (1-Click Google Drive tools reserved exclusively for owner email)
   const isOwner = Boolean(
-    userProfile.email?.toLowerCase().trim() === 'mine.mine0100@gmail.com' ||
-    userProfile.isOwner === true ||
-    (typeof window !== 'undefined' && localStorage.getItem('diavet_is_owner') === 'true')
+    userProfile.email?.toLowerCase().trim() === 'mine.mine0100@gmail.com'
   );
 
   // Articles & Tips State
@@ -141,6 +160,7 @@ export default function App() {
   const [showCelebrationModal, setShowCelebrationModal] = useState<boolean>(false);
   const [showContactModal, setShowContactModal] = useState<boolean>(false);
   const [showDriveSyncModal, setShowDriveSyncModal] = useState<boolean>(false);
+  const [showExcelModal, setShowExcelModal] = useState<boolean>(false);
 
   // Sync to localStorage
   useEffect(() => {
@@ -459,6 +479,7 @@ export default function App() {
         return (
           <VetQuestionnaire
             currentLang={currentLang}
+            userProfile={userProfile}
             onFinish={handleFinishVet}
             onGoHome={() => navigateTo('home')}
             onPreviewPortal={() => navigateTo('vet-portal')}
@@ -530,6 +551,16 @@ export default function App() {
           />
         );
 
+      case 'videos':
+        return (
+          <DiaVetTvSection
+            currentLang={currentLang}
+            onGoHome={() => navigateTo('home')}
+            onSelectOwnerPortal={() => navigateTo('owner-portal')}
+            onSelectVetPortal={() => navigateTo('vet-portal')}
+          />
+        );
+
       case 'profile':
         return (
           <BadgesProfile
@@ -564,9 +595,16 @@ export default function App() {
             {/* HERO SECTION */}
             <HeroSection
               currentLang={currentLang}
-              onStart={() => navigateTo(userProfile.userRole === 'vet' ? 'questionnaire-vet' : 'questionnaire-owner')}
+              onStart={() => {
+                if (!isRegistered) {
+                  setShowAuthModal(true);
+                } else {
+                  navigateTo(userProfile.userRole === 'vet' ? 'questionnaire-vet' : 'questionnaire-owner');
+                }
+              }}
               onExploreVets={() => navigateTo('vet-portal')}
               onOpenDirectory={() => navigateTo('dz-directory')}
+              onOpenVideos={() => navigateTo('videos')}
             />
 
             {/* DUAL SPACES SECTION (PROPRIETAIRE VS VETERINAIRE) */}
@@ -761,52 +799,87 @@ export default function App() {
     }
   };
 
-  // If user hasn't registered a real profile yet, show the futuristic Onboarding Gateway
-  if (!isRegistered) {
-    return (
-      <div className={`min-h-screen relative overflow-hidden ${
-        currentTheme === 'dark' ? 'bg-[#020617] text-slate-100' : 'bg-slate-900 text-slate-100'
-      }`}>
-        <AlgiersBackground theme="dark" />
-        <div className="relative z-10">
-          <OnboardingGateway
-            currentLang={currentLang}
-            onSelectLang={setCurrentLang}
-            onRegister={(profile, selectedRole) => {
-              soundEngine.playLevelUp();
-              setUserProfile(prev => ({
-                ...prev,
-                name: profile.name || prev.name,
-                phone: profile.phone || prev.phone,
-                wilaya: profile.wilaya || prev.wilaya,
-                userRole: selectedRole,
-                petName: profile.petName || prev.petName,
-                clinicName: profile.clinicName || prev.clinicName,
-                points: (prev.points ?? 0) + (selectedRole === 'owner' ? 100 : 250),
-                isVip: true,
-              }));
-              setIsRegistered(true);
-              try {
-                localStorage.setItem('diavet_registered', 'true');
-              } catch (e) {
-                console.error(e);
-              }
-              if (selectedRole === 'vet') {
-                setActiveScreen('questionnaire-vet');
-              } else {
-                setActiveScreen('questionnaire-owner');
-              }
-              triggerRewardToast(
-                "Profil Activé avec Succès ! 🇩🇿",
-                `Bienvenue ${profile.name || 'sur DiaVet'} ! Formulaire & carnet VIP débloqués.`,
-                '🎉'
-              );
-            }}
-          />
-        </div>
-      </div>
+  // Real Registration / Auth handler with unique email & verification code
+  const handleRegisterSuccess = (profile: Partial<UserProfile>, selectedRole: 'owner' | 'vet') => {
+    soundEngine.playLevelUp();
+    const pointsEarned = selectedRole === 'vet' ? 250 : 150;
+    const isOwnerUser = Boolean(
+      profile.email?.toLowerCase().trim() === 'mine.mine0100@gmail.com' ||
+      profile.phone === '0100' ||
+      profile.pin === '0100'
     );
-  }
+
+    const fullProfile: UserProfile = {
+      ...userProfile,
+      name: profile.name || userProfile.name,
+      email: profile.email || userProfile.email,
+      phone: profile.phone || userProfile.phone,
+      wilaya: profile.wilaya || userProfile.wilaya,
+      commune: profile.commune || userProfile.commune,
+      userRole: selectedRole,
+      petName: profile.petName || userProfile.petName,
+      petType: profile.petType || userProfile.petType,
+      clinicName: profile.clinicName || userProfile.clinicName,
+      points: (userProfile.points ?? 0) + pointsEarned,
+      healthPoints: (userProfile.healthPoints ?? 0) + pointsEarned,
+      isVip: true,
+      vipCode: userProfile.vipCode || `DZ-${Math.floor(100000 + Math.random() * 900000)}`,
+      badgeTitle: selectedRole === 'vet' ? 'Praticien Agréé Fondateur DZ' : 'Membre VIP Fondateur DZ',
+      isOwner: isOwnerUser,
+      isVipEarlyAccess: true
+    };
+
+    setUserProfile(fullProfile);
+    setIsRegistered(true);
+    setHasCompletedQuestionnaire(true);
+    setShowAuthModal(false);
+
+    try {
+      localStorage.setItem('diavet_registered', 'true');
+      localStorage.setItem('diavet_completed_questionnaire', 'true');
+      localStorage.setItem('diavet_user_profile', JSON.stringify(fullProfile));
+      if (isOwnerUser) {
+        localStorage.setItem('diavet_is_owner', 'true');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Record in leads registry for Excel export
+    recordRegistrationLead(fullProfile, selectedRole);
+
+    if (selectedRole === 'vet') {
+      setActiveScreen('questionnaire-vet');
+    } else {
+      setActiveScreen('questionnaire-owner');
+    }
+
+    setShowCelebrationModal(true);
+
+    triggerRewardToast(
+      currentLang === 'ar' ? "تم تفعيل حسابك واستلام الهدية ! 🇩🇿" : "Profil & Cadeau VIP Débloqués ! 🇩🇿",
+      `Bienvenue ${profile.name || 'sur DiaVet'} ! Tous les accès et votre Pass VIP sont activés (+${pointsEarned} Pts).`,
+      '🎉'
+    );
+  };
+
+  // Force Clean Logout for all sessions
+  const handleLogout = () => {
+    soundEngine.playCyberClick();
+    setIsRegistered(false);
+    setHasCompletedQuestionnaire(false);
+    setUserProfile(DEFAULT_USER_PROFILE);
+    try {
+      localStorage.removeItem('diavet_registered');
+      localStorage.removeItem('diavet_completed_questionnaire');
+      localStorage.removeItem('diavet_user_profile');
+    } catch {}
+    triggerRewardToast(
+      currentLang === 'ar' ? "تم تسجيل الخروج بنجاح" : "Déconnexion réussie",
+      currentLang === 'ar' ? "لقد تم تسجيل خروجك بنجاح من حسابك." : "Vous êtes maintenant déconnecté de DiaVet.",
+      "👋"
+    );
+  };
 
   return (
     <div className={`min-h-screen relative transition-colors duration-300 ${
@@ -855,21 +928,19 @@ export default function App() {
         hasCompletedQuestionnaire={hasCompletedQuestionnaire}
         userRole={userProfile.userRole}
         isOwner={isOwner}
+        userName={userProfile.name}
+        userPoints={userProfile.points}
+        onOpenExcel={() => setShowExcelModal(true)}
         onLockedFeatureClick={(featureName) => {
           setLockedFeatureName(featureName);
           setShowLockedGiftModal(true);
         }}
         onOpenContact={() => setShowContactModal(true)}
         onOpenDriveSync={() => setShowDriveSyncModal(true)}
-        onResetRegistration={() => {
-          setIsRegistered(false);
-          setHasCompletedQuestionnaire(false);
-          try {
-            localStorage.removeItem('diavet_registered');
-            localStorage.removeItem('diavet_completed_questionnaire');
-          } catch {}
-          soundEngine.playCyberClick();
-        }}
+        onResetRegistration={handleLogout}
+        isRegistered={isRegistered}
+        onOpenAuth={() => setShowAuthModal(true)}
+        onLogout={handleLogout}
       />
 
       {/* IPHONE FRAME SIMULATOR WRAPPER */}
@@ -968,6 +1039,32 @@ export default function App() {
         isOpen={showDriveSyncModal}
         onClose={() => setShowDriveSyncModal(false)}
       />
+
+      {/* EXCEL REGISTRY DOWNLOAD MODAL (FOR LEADS EXPORT) */}
+      <ExcelLeadsModal
+        isOpen={showExcelModal}
+        onClose={() => setShowExcelModal(false)}
+        currentLang={currentLang}
+      />
+
+      {/* WHATSAPP SUPPORT FLOAT BUTTON (WAA DZ) */}
+      <WhatsAppSupportButton
+        currentLang={currentLang}
+      />
+
+      {/* AUTHENTICATION & OFFICIAL VERIFICATION GATEWAY MODAL */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-2 sm:p-4 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="w-full max-w-xl my-auto">
+            <OnboardingGateway
+              currentLang={currentLang}
+              onSelectLang={setCurrentLang}
+              onRegister={handleRegisterSuccess}
+              onClose={isRegistered ? () => setShowAuthModal(false) : undefined}
+            />
+          </div>
+        </div>
+      )}
 
     </div>
   );

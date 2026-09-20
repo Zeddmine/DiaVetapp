@@ -15,6 +15,7 @@ class SoundEngine {
   private currentBgmMode: BgmMode = 'cyber_algiers';
   private bgmInterval: any = null;
   private bgmNotesInterval: any = null;
+  private suspendTimeout: any = null;
 
   constructor() {
     // Check saved preferences or default
@@ -48,10 +49,20 @@ class SoundEngine {
     }
 
     if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
     }
 
     return this.ctx;
+  }
+
+  public scheduleSuspend() {
+    if (this.isBgmPlaying) return;
+    if (this.suspendTimeout) clearTimeout(this.suspendTimeout);
+    this.suspendTimeout = setTimeout(() => {
+      if (this.ctx && !this.isBgmPlaying && this.ctx.state === 'running') {
+        this.ctx.suspend().catch(() => {});
+      }
+    }, 1200);
   }
 
   public getIsMuted(): boolean {
@@ -318,40 +329,12 @@ class SoundEngine {
   private playRealAnimalAudio(species: 'chat' | 'chien' | 'oiseau' | 'cheval', fallbackFn: () => void) {
     if (this.isMuted) return;
     this.init();
-
-    const sources = this.REAL_ANIMAL_SOURCES[species] || [];
-    let playedSuccessfully = false;
-
-    // Try pre-cached or new HTML5 Audio
-    for (const src of sources) {
-      try {
-        const audio = new Audio(src);
-        audio.volume = 0.85;
-        audio.crossOrigin = 'anonymous';
-        const promise = audio.play();
-        if (promise !== undefined) {
-          promise
-            .then(() => {
-              playedSuccessfully = true;
-            })
-            .catch(() => {
-              // Browser autoplay policy or network error -> use acoustic synthesis fallback
-              if (!playedSuccessfully) {
-                fallbackFn();
-              }
-            });
-          return;
-        } else {
-          return;
-        }
-      } catch {
-        continue;
-      }
-    }
-
-    if (!playedSuccessfully) {
+    // Use harmonic Web Audio acoustic synthesis directly
+    // This avoids creating HTMLMediaElement sessions that hijack the iOS Dynamic Island
+    try {
       fallbackFn();
-    }
+    } catch {}
+    this.scheduleSuspend();
   }
 
   // 1. CHAT (CAT: Real Recorded Cat Meow + Harmonic Fallback)
@@ -599,6 +582,7 @@ class SoundEngine {
 
     osc.start(now);
     osc.stop(now + 0.07);
+    this.scheduleSuspend();
   }
 
   // Badge Forge Celebratory Laser Chime
