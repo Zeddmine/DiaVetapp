@@ -26,30 +26,61 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
     console.error('DiaVet Global Crash Caught:', error, errorInfo);
   }
 
+  handleFullCleanReset = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          await caches.delete(name);
+        }
+      }
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (e) {
+      console.error('Reset error:', e);
+    }
+    window.location.href = window.location.pathname + '?v=' + Date.now();
+  };
+
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6 text-center font-sans">
-          <div className="max-w-md p-8 rounded-3xl bg-slate-900 border border-cyan-500/30 shadow-2xl space-y-4">
+        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4 sm:p-6 text-center font-sans">
+          <div className="max-w-md w-full p-6 sm:p-8 rounded-3xl bg-slate-900 border border-cyan-500/30 shadow-2xl space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-400/40 flex items-center justify-center mx-auto text-2xl font-black">
               🐾
             </div>
-            <h1 className="text-2xl font-black text-white">DiaVet Algérie</h1>
+            <h1 className="text-2xl font-black text-white">DiaVet Algérie 🇩🇿</h1>
             <p className="text-sm text-slate-300">
-              Une mise à jour ou un cache local nécessite un rechargement propre de la session.
+              Mise à jour de sécurité et synchronisation de l'application.
             </p>
-            <button
-              onClick={() => {
-                try {
-                  localStorage.clear();
-                  sessionStorage.clear();
-                } catch {}
-                window.location.reload();
-              }}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-sm shadow-lg hover:scale-105 transition-all cursor-pointer"
-            >
-              Réinitialiser et Ouvrir DiaVet
-            </button>
+            {this.state.errorMessage && (
+              <p className="text-xs text-rose-300 bg-rose-950/40 border border-rose-500/20 p-2.5 rounded-xl font-mono text-left overflow-auto max-h-24">
+                {this.state.errorMessage}
+              </p>
+            )}
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                onClick={this.handleFullCleanReset}
+                className="w-full px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-sm shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+              >
+                Actualiser & Nettoyer le Cache
+              </button>
+              <button
+                type="button"
+                onClick={() => this.setState({ hasError: false })}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs border border-white/10 active:scale-95 transition-all cursor-pointer"
+              >
+                Continuer quand même vers DiaVet
+              </button>
+            </div>
           </div>
         </div>
       );
