@@ -1,25 +1,28 @@
 import { StrictMode, Component, ReactNode, ErrorInfo } from 'react';
 import { createRoot } from 'react-dom/client';
-import { registerSW } from 'virtual:pwa-register';
 import App from './App.tsx';
 import { LanguageProvider } from './context/LanguageContext.tsx';
 import { LoadingProvider } from './context/LoadingContext.tsx';
 import './index.css';
 
-// Register PWA service worker safely
-try {
-  const updateSW = registerSW({
-    immediate: true,
-    onNeedRefresh() {
-      console.log('Nouvelle version DiaVet PWA disponible - rafraîchissement...');
-      updateSW(true);
-    },
-    onOfflineReady() {
-      console.log('DiaVet PWA prêt pour utilisation hors-ligne');
-    },
-  });
-} catch (pwaErr) {
-  console.warn('PWA registration skipped or constrained:', pwaErr);
+// Register PWA service worker safely in production
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  import('virtual:pwa-register')
+    .then(({ registerSW }) => {
+      const updateSW = registerSW({
+        immediate: true,
+        onNeedRefresh() {
+          console.log('Nouvelle version DiaVet PWA disponible - rafraîchissement...');
+          updateSW(true);
+        },
+        onOfflineReady() {
+          console.log('DiaVet PWA prêt pour utilisation hors-ligne');
+        },
+      });
+    })
+    .catch((pwaErr) => {
+      console.warn('PWA registration skipped or constrained:', pwaErr);
+    });
 }
 
 interface ErrorBoundaryProps {
