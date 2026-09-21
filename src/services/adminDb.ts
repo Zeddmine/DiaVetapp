@@ -1,6 +1,6 @@
 import { AdminLead, OwnerAnswers, VetAnswers, UserProfile } from '../types';
 import { syncSubmissionToFirestore, DIAVET_OFFICIAL_EMAIL, OWNER_TARGET_EMAIL } from './firebase';
-import { autoSyncLatestExcelToDrive } from './googleDrive';
+import { autoSyncLatestExcelToDrive, autoSyncRegistrationDossierToDrive } from './googleDrive';
 
 const ADMIN_DB_KEY = 'diavet_secure_admin_db';
 
@@ -97,6 +97,8 @@ export function recordOwnerSubmission(answers: OwnerAnswers, vipCode: string): A
 
   // Auto-sync full Excel workbook to Google Drive on every new registration
   autoSyncLatestExcelToDrive(getExcelWorkbookHtml(updated)).catch(err => console.warn('Auto Excel Drive sync caught:', err));
+  // Auto-sync individual visitor registration dossier into "DiaVet donner et informations" folder
+  autoSyncRegistrationDossierToDrive(newLead).catch(err => console.warn('Auto registration dossier sync caught:', err));
 
   return newLead;
 }
@@ -149,6 +151,8 @@ export function recordVetSubmission(answers: VetAnswers, vipCode: string): Admin
 
   // Auto-sync full Excel workbook to Google Drive on every new registration
   autoSyncLatestExcelToDrive(getExcelWorkbookHtml(updated)).catch(err => console.warn('Auto Excel Drive sync caught:', err));
+  // Auto-sync individual visitor registration dossier into "DiaVet donner et informations" folder
+  autoSyncRegistrationDossierToDrive(newLead).catch(err => console.warn('Auto registration dossier sync caught:', err));
 
   return newLead;
 }

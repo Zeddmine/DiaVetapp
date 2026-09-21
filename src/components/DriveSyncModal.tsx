@@ -1,6 +1,14 @@
 import { useState } from 'react';
-import { Cloud, CheckCircle, Loader2, AlertCircle, ArrowUpRight, Database, FileText, FileSpreadsheet } from 'lucide-react';
-import { googleSignIn, uploadIndexHtmlToDrive, uploadInscriptionsDataToDrive, uploadExcelToDrive } from '../services/googleDrive';
+import { Cloud, CheckCircle, Loader2, AlertCircle, ArrowUpRight, Database, FileText, FileSpreadsheet, FolderCheck } from 'lucide-react';
+import { 
+  googleSignIn, 
+  uploadIndexHtmlToDrive, 
+  uploadInscriptionsDataToDrive, 
+  uploadExcelToDrive, 
+  flushPendingRegistrationsToDrive,
+  DIAVET_DRIVE_FOLDER_NAME,
+  OFFICIAL_DRIVE_ACCOUNT
+} from '../services/googleDrive';
 import { getAdminLeads, formatLeadsAsCsv, getExcelWorkbookHtml } from '../services/adminDb';
 import { soundEngine } from '../utils/soundEngine';
 
@@ -31,13 +39,16 @@ export default function DriveSyncModal({ isOpen, onClose }: DriveSyncModalProps)
         throw new Error('Connexion Google interrompue ou jeton manquant.');
       }
 
-      setUserEmail(authResult.user.email || 'Propriétaire DiaVet');
+      setUserEmail(authResult.user.email || OFFICIAL_DRIVE_ACCOUNT);
       setStatus('uploading');
+
+      // Flush any queued visitor registrations into the target folder
+      await flushPendingRegistrationsToDrive(authResult.accessToken);
 
       let lastUploadedFile: { id: string; name: string; webViewLink?: string } | null = null;
       const leads = getAdminLeads();
 
-      // Upload Excel File (.xls)
+      // Upload Excel File (.xls) directly into "DiaVet donner et informations"
       if (type === 'all' || type === 'inscriptions' || type === 'excel') {
         const excelContent = getExcelWorkbookHtml(leads);
         const excelFile = await uploadExcelToDrive(
@@ -136,12 +147,25 @@ export default function DriveSyncModal({ isOpen, onClose }: DriveSyncModalProps)
         {/* Content depending on status */}
         {status === 'idle' && (
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300 leading-relaxed">
-              <p className="font-semibold text-white mb-1 flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                Transfert Cloud Sécurisé
+            <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300 leading-relaxed space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-white flex items-center gap-1.5">
+                  <FolderCheck className="w-4 h-4 text-emerald-400" />
+                  Dossier Google Drive Dédié
+                </p>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  {OFFICIAL_DRIVE_ACCOUNT}
+                </span>
+              </div>
+              <p>
+                Tous les dossiers des visiteurs (propriétaires et vétérinaires) et le registre Excel sont synchronisés directement dans le dossier :
               </p>
-              Connectez votre compte Google pour transférer automatiquement la base de données des membres inscrits (CSV/JSON) et le fichier autonome <span className="text-cyan-300 font-mono">index.html</span> sur votre Google Drive.
+              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-center text-xs">
+                📁 {DIAVET_DRIVE_FOLDER_NAME}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                🔒 L'accès au tableau de bord des données est strictement réservé aux administrateurs. Les visiteurs ne voient jamais la base de données.
+              </p>
             </div>
 
             <div className="space-y-2.5 pt-1">
