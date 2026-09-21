@@ -222,23 +222,33 @@ export default function App() {
     } catch {}
   }, [favoriteArticleIds]);
 
-  // Sync HTML root and body theme
+  // Sync HTML root, body, and meta theme-color
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+
     if (currentTheme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
+      root.setAttribute('data-theme', 'dark');
       if (body) {
         body.classList.add('dark');
         body.classList.remove('light');
       }
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', '#020617');
+      }
     } else {
       root.classList.add('light');
       root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
       if (body) {
         body.classList.add('light');
         body.classList.remove('dark');
+      }
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', '#f8fafc');
       }
     }
     try {

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" class="dark" style="background-color: #020617; color: #f8fafc; margin: 0; padding: 0; height: 100%;">
+<html lang="fr" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -13,6 +13,20 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script>
+      // Load saved theme immediately to prevent white/dark flash
+      try {
+        var savedTheme = localStorage.getItem('diavet_theme');
+        if (savedTheme === 'light') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch (e) {}
+
       // Automatically clean any legacy or intercepting service workers and caches
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
@@ -32,7 +46,7 @@
       }
     </script>
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white overscroll-none overflow-x-hidden" style="background-color: #020617;">
+  <body class="antialiased selection:bg-cyan-500 selection:text-white overscroll-none overflow-x-hidden">
     <div id="root">
       <!-- Instant 0ms Dark Splash Screen prevents white flash on mobile home screen launcher -->
       <div style="min-height: 100vh; width: 100vw; background-color: #020617; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
