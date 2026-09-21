@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr" class="dark" style="background-color: #020617; color: #f8fafc; margin: 0; padding: 0; height: 100%;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DiaVet DZ" />
+    <meta name="theme-color" content="#020617" />
+    <title>DiaVet Algérie — La Plateforme Unifiée de Santé Animale 🇩🇿</title>
+    <meta name="description" content="Plateforme numérique vétérinaire pour l'Algérie connectant propriétaires et vétérinaires avec carnet de santé, système de badges et jalons santé, articles et conseils cliniques, et annuaire d'urgences." />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white overscroll-none overflow-x-hidden" style="background-color: #020617;">
+    <div id="root">
+      <!-- Instant 0ms Dark Splash Screen prevents white flash on mobile home screen launcher -->
+      <div style="min-height: 100vh; width: 100vw; background-color: #020617; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div class="diavet-splash-icon" style="width: 80px; height: 80px; border-radius: 24px; background: linear-gradient(135deg, #06b6d4, #10b981); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 12px 30px -5px rgba(6,182,212,0.5);">
+          <span style="font-size: 40px; line-height: 1;">🐾</span>
+        </div>
+        <h1 style="font-size: 24px; font-weight: 900; color: #ffffff; margin: 0 0 8px 0; tracking: -0.02em;">DiaVet Algérie</h1>
+        <p style="font-size: 13px; color: #06b6d4; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 24px 0;">Chargement sécurisé...</p>
+        <div style="width: 48px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; position: relative;">
+          <div style="width: 100%; height: 100%; background: linear-gradient(90deg, #06b6d4, #10b981); animation: loadingBar 1.5s infinite linear;"></div>
+        </div>
+        <style>@keyframes loadingBar{0%{transform:translate(-100%)}to{transform:translate(100%)}}</style>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      (function() {
+        const CURRENT_VERSION = 'diavet-v2.1.2';
+        const storedVersion = localStorage.getItem('diavet_cache_version');
+        if (storedVersion !== CURRENT_VERSION) {
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (let name of names) {
+                caches.delete(name);
+              }
+            });
+          }
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for (let reg of registrations) {
+                reg.unregister();
+              }
+            });
+          }
+          localStorage.setItem('diavet_cache_version', CURRENT_VERSION);
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "DiaVet - Écosystème Vétérinaire",
+  "description": "Plateforme numérique vétérinaire pour l'Algérie connectant propriétaires et vétérinaires avec carnet de santé, système de badges et jalons santé, articles et conseils cliniques, et annuaire d'urgences.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
