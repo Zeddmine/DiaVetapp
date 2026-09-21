@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Language, Badge, HealthMilestone, UserProfile } from '../types';
 import { translations } from '../data/translations';
 import { 
@@ -8,6 +8,7 @@ import {
   PlusCircle, Trash2, Volume2, Wand2
 } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
+import { getRegisteredAccounts, saveRegisteredAccounts } from '../services/accountService';
 
 interface BadgesProfileProps {
   currentLang: Language;
@@ -76,6 +77,19 @@ export default function BadgesProfile({
     email: userProfile.email || ''
   });
 
+  // Sync editForm whenever userProfile changes
+  useEffect(() => {
+    setEditForm({
+      name: userProfile.name || '',
+      wilaya: userProfile.wilaya || '16 - Alger',
+      petName: userProfile.petName || '',
+      petType: userProfile.petType || 'Chat (Européen)',
+      userRole: userProfile.userRole || 'owner',
+      phone: userProfile.phone || '',
+      email: userProfile.email || ''
+    });
+  }, [userProfile]);
+
   // Badge Forge State
   const [forgeTitle, setForgeTitle] = useState('');
   const [forgeDescription, setForgeDescription] = useState('');
@@ -91,15 +105,38 @@ export default function BadgesProfile({
     if (onUpdateProfile) {
       onUpdateProfile(editForm);
     }
+    // Also sync to registered accounts in localStorage
+    try {
+      const accounts = getRegisteredAccounts();
+      const updatedAccounts = accounts.map(acc => {
+        if (acc.email.toLowerCase() === (userProfile.email || editForm.email).toLowerCase()) {
+          return {
+            ...acc,
+            fullName: editForm.name,
+            phone: editForm.phone,
+            wilaya: editForm.wilaya,
+            petName: editForm.petName,
+            petType: editForm.petType,
+            role: editForm.userRole as 'owner' | 'vet'
+          };
+        }
+        return acc;
+      });
+      saveRegisteredAccounts(updatedAccounts);
+    } catch {}
     setIsEditingProfile(false);
   };
 
   const handleAnimalSelect = (animal: typeof ANIMAL_CHOICES[0]) => {
     soundEngine.playAnimalSound(animal.sound);
-    setEditForm(prev => ({
-      ...prev,
-      petType: `${animal.label} ${prev.petType.includes('(') ? prev.petType.substring(prev.petType.indexOf('(')) : ''}`
-    }));
+    setEditForm(prev => {
+      const current = prev.petType || '';
+      const bracketPart = current.includes('(') ? current.substring(current.indexOf('(')) : '';
+      return {
+        ...prev,
+        petType: bracketPart ? `${animal.label} ${bracketPart}` : animal.label
+      };
+    });
   };
 
   const handleForgeBadge = (e: React.FormEvent) => {

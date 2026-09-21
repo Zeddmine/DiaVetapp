@@ -50,6 +50,9 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     }
 
     cachedAccessToken = credential.accessToken;
+    try {
+      localStorage.setItem('diavet_gdrive_token', credential.accessToken);
+    } catch {}
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Sign in error:', error);
@@ -60,12 +63,15 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
-  return cachedAccessToken;
+  return cachedAccessToken || localStorage.getItem('diavet_gdrive_token');
 };
 
 export const logout = async () => {
   await auth.signOut();
   cachedAccessToken = null;
+  try {
+    localStorage.removeItem('diavet_gdrive_token');
+  } catch {}
 };
 
 /**
@@ -161,4 +167,35 @@ export async function uploadInscriptionsDataToDrive(
 
   const result = await response.json();
   return result;
+}
+
+/**
+ * Upload the official Excel workbook (.xls) with full registration records and multi-pets profiles directly into Google Drive
+ */
+export async function uploadExcelToDrive(
+  token: string, 
+  excelHtmlContent: string, 
+  fileName: string = `DiaVet_Inscriptions_Registre_${new Date().toISOString().slice(0,10)}.xls`
+): Promise<{ id: string; name: string; webViewLink?: string }> {
+  return uploadInscriptionsDataToDrive(
+    token,
+    excelHtmlContent,
+    fileName,
+    'application/vnd.ms-excel'
+  );
+}
+
+/**
+ * Attempts to automatically sync the latest Excel spreadsheet to Google Drive if a token is available
+ */
+export async function autoSyncLatestExcelToDrive(excelContent: string): Promise<boolean> {
+  try {
+    const token = cachedAccessToken || localStorage.getItem('diavet_gdrive_token');
+    if (!token) return false;
+    await uploadExcelToDrive(token, excelContent);
+    return true;
+  } catch (e) {
+    console.warn('Silent auto-sync Excel to Drive error:', e);
+    return false;
+  }
 }

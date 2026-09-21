@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FileSpreadsheet, Download, Search, Users, ShieldCheck, 
-  X, RefreshCw, CheckCircle2, Phone, MapPin, Calendar, Heart, Stethoscope
+  X, RefreshCw, CheckCircle2, Phone, MapPin, Calendar, Heart, Stethoscope,
+  Cloud, Loader2
 } from 'lucide-react';
 import { AdminLead, Language } from '../types';
-import { getAdminLeads, exportLeadsToExcel, exportLeadsToCsv, exportLeadsToJson } from '../services/adminDb';
+import { getAdminLeads, exportLeadsToExcel, exportLeadsToCsv, exportLeadsToJson, getExcelWorkbookHtml } from '../services/adminDb';
+import { googleSignIn, uploadExcelToDrive } from '../services/googleDrive';
 import { soundEngine } from '../utils/soundEngine';
 
 interface ExcelLeadsModalProps {
@@ -21,11 +23,14 @@ export default function ExcelLeadsModal({
   const [leads, setLeads] = useState<AdminLead[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'owner' | 'vet'>('all');
-  const [copiedMsg, setCopiedMsg] = useState(false);
+  const [driveStatus, setDriveStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [driveMsg, setDriveMsg] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setLeads(getAdminLeads());
+      setDriveStatus('idle');
+      setDriveMsg('');
     }
   }, [isOpen]);
 
@@ -54,6 +59,31 @@ export default function ExcelLeadsModal({
   const handleCsvExport = () => {
     soundEngine.playCyberClick();
     exportLeadsToCsv(leads);
+  };
+
+  const handleDriveSync = async () => {
+    soundEngine.playCyberClick();
+    setDriveStatus('loading');
+    setDriveMsg('Connexion et transfert vers Google Drive...');
+    try {
+      const authResult = await googleSignIn();
+      if (!authResult?.accessToken) {
+        throw new Error('Jeton d\'accès Google manquant.');
+      }
+      const excelHtml = getExcelWorkbookHtml(leads);
+      const res = await uploadExcelToDrive(
+        authResult.accessToken,
+        excelHtml,
+        `DiaVet_Inscriptions_Registre_${new Date().toISOString().slice(0,10)}.xls`
+      );
+      soundEngine.playSuccess();
+      setDriveStatus('success');
+      setDriveMsg(`Fichier Excel enregistré avec succès sur votre Google Drive (${authResult.user.email || 'Google'}) !`);
+    } catch (err: any) {
+      console.error(err);
+      setDriveStatus('error');
+      setDriveMsg(err.message || 'Erreur lors du transfert sur Google Drive.');
+    }
   };
 
   return (
@@ -135,14 +165,27 @@ export default function ExcelLeadsModal({
             </button>
           </div>
 
-          {/* Direct Download Buttons */}
-          <div className="flex items-center gap-2">
+          {/* Direct Download & Drive Sync Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleExcelExport}
               className="px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20 cursor-pointer active:scale-95 transition-all"
             >
               <Download className="w-4 h-4" />
               <span>Télécharger Excel (.xls)</span>
+            </button>
+
+            <button
+              onClick={handleDriveSync}
+              disabled={driveStatus === 'loading'}
+              className="px-3.5 sm:px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/40 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-cyan-500/10 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
+            >
+              {driveStatus === 'loading' ? (
+                <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+              ) : (
+                <Cloud className="w-4 h-4 text-cyan-400" />
+              )}
+              <span>Envoyer sur mon Google Drive</span>
             </button>
 
             <button
@@ -153,6 +196,33 @@ export default function ExcelLeadsModal({
             </button>
           </div>
         </div>
+
+        {/* Drive Status Notice */}
+        {driveMsg && (
+          <div className={`px-4 sm:px-6 py-2.5 text-xs font-semibold flex items-center justify-between border-b ${
+            driveStatus === 'success' 
+              ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30' 
+              : driveStatus === 'error'
+              ? 'bg-rose-950/40 text-rose-300 border-rose-500/30'
+              : 'bg-cyan-950/40 text-cyan-300 border-cyan-500/30'
+          }`}>
+            <div className="flex items-center gap-2">
+              {driveStatus === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+              {driveStatus === 'loading' && <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />}
+              <span>{driveMsg}</span>
+            </div>
+            {driveStatus === 'success' && (
+              <a
+                href="https://drive.google.com"
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-white font-bold ml-2"
+              >
+                Voir dans Google Drive &rarr;
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Table Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">

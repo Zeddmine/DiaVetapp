@@ -11,8 +11,12 @@ export default defineConfig(({ command }) => {
       react(),
       tailwindcss(),
       VitePWA({
+        disable: command !== 'build',
         registerType: 'autoUpdate',
-        injectRegister: 'auto',
+        injectRegister: null,
+        devOptions: {
+          enabled: false,
+        },
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           id: './',
@@ -59,6 +63,13 @@ export default defineConfig(({ command }) => {
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname || '.', 'src'),
+      },
+    },
+    server: {
+      host: '0.0.0.0',
+      port: 3000,
+      watch: {
+        ignored: ['**/dist/**', '**/docs/**', '**/.git/**'],
       },
     }
   };

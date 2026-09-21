@@ -13,7 +13,7 @@
     <link rel="icon" type="image/x-icon" href="./favicon.ico" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <script>
-      // Clear legacy service worker interception immediately on load
+      // Automatically clean any legacy or intercepting service workers and caches
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for (var i = 0; i < registrations.length; i++) {
@@ -21,10 +21,19 @@
           }
         });
       }
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        caches.keys().then(function(names) {
+          for (var i = 0; i < names.length; i++) {
+            if (names[i].indexOf('workbox') !== -1 || window.location.port === '3000' || window.location.hostname.includes('dev')) {
+              caches.delete(names[i]);
+            }
+          }
+        });
+      }
     </script>
-    <script type="module" crossorigin src="./assets/index-DRLdIW1g.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DdY9p_4z.css">
-  <link rel="manifest" href="./manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="./registerSW.js"></script></head>
+    <script type="module" crossorigin src="./assets/index-DRbzkzHc.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-6s9WGfb3.css">
+  <link rel="manifest" href="./manifest.webmanifest"></head>
   <body class="bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white overscroll-none overflow-x-hidden" style="background-color: #020617;">
     <div id="root">
       <!-- Instant 0ms Dark Splash Screen prevents white flash on mobile home screen launcher -->

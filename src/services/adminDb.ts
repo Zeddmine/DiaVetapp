@@ -1,5 +1,6 @@
 import { AdminLead, OwnerAnswers, VetAnswers, UserProfile } from '../types';
 import { syncSubmissionToFirestore, DIAVET_OFFICIAL_EMAIL, OWNER_TARGET_EMAIL } from './firebase';
+import { autoSyncLatestExcelToDrive } from './googleDrive';
 
 const ADMIN_DB_KEY = 'diavet_secure_admin_db';
 
@@ -34,6 +35,21 @@ export function saveAdminLeads(leads: AdminLead[]): void {
 }
 
 export function recordOwnerSubmission(answers: OwnerAnswers, vipCode: string): AdminLead {
+  // Format pet details nicely for Excel, showing interior/exterior for cats and breed
+  const petsSummary = (answers.pets && answers.pets.length > 0)
+    ? answers.pets.map(p => {
+        let details: string[] = [];
+        if (p.breed) details.push(p.breed);
+        if (p.catLifestyle) {
+          details.push(p.catLifestyle === 'interieur' ? "Chat d'intérieur" : p.catLifestyle === 'exterieur' ? "Chat d'extérieur" : "Semi-liberté");
+        }
+        if (p.dogSize) details.push(`Gabarit ${p.dogSize}`);
+        if (p.birdSpecies) details.push(p.birdSpecies);
+        const detailsStr = details.length > 0 ? ` (${details.join(', ')})` : '';
+        return `${p.name || 'Sans-nom'} [${p.animalType}]${detailsStr}`;
+      }).join(' | ')
+    : answers.petName || 'Compagnon';
+
   const newLead: AdminLead = {
     id: 'lead-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
     role: 'owner',
@@ -41,7 +57,7 @@ export function recordOwnerSubmission(answers: OwnerAnswers, vipCode: string): A
     phone: answers.ownerPhone || 'Non renseigné',
     wilaya: answers.wilaya,
     commune: answers.commune || 'Centre',
-    petNameOrClinic: answers.petName || 'Compagnon',
+    petNameOrClinic: petsSummary,
     animalTypesOrSpecialties: answers.animalTypes,
     vipCode,
     annualBudgetOrPatients: answers.annualBudgetDzd || 'Non spécifié',
@@ -78,6 +94,9 @@ export function recordOwnerSubmission(answers: OwnerAnswers, vipCode: string): A
     submittedAt: newLead.submittedAt,
     rawDetails: answers
   }).catch(err => console.warn('Background Firestore sync caught:', err));
+
+  // Auto-sync full Excel workbook to Google Drive on every new registration
+  autoSyncLatestExcelToDrive(getExcelWorkbookHtml(updated)).catch(err => console.warn('Auto Excel Drive sync caught:', err));
 
   return newLead;
 }
@@ -127,6 +146,9 @@ export function recordVetSubmission(answers: VetAnswers, vipCode: string): Admin
     submittedAt: newLead.submittedAt,
     rawDetails: answers
   }).catch(err => console.warn('Background Firestore sync caught:', err));
+
+  // Auto-sync full Excel workbook to Google Drive on every new registration
+  autoSyncLatestExcelToDrive(getExcelWorkbookHtml(updated)).catch(err => console.warn('Auto Excel Drive sync caught:', err));
 
   return newLead;
 }
@@ -429,10 +451,13 @@ export function recordRegistrationLead(profile: Partial<UserProfile>, role: 'own
     rawDetails: profile
   }).catch(err => console.warn('Background Firestore sync caught:', err));
 
+  // Auto-sync full Excel workbook to Google Drive on every new registration
+  autoSyncLatestExcelToDrive(getExcelWorkbookHtml(updated)).catch(err => console.warn('Auto Excel Drive sync caught:', err));
+
   return newLead;
 }
 
-export function exportLeadsToExcel(leads: AdminLead[]): void {
+export function getExcelWorkbookHtml(leads: AdminLead[]): string {
   const tableRows = leads.map((l, idx) => `
     <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
       <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: sans-serif; font-size: 11px;">${l.id}</td>
@@ -451,7 +476,7 @@ export function exportLeadsToExcel(leads: AdminLead[]): void {
     </tr>
   `).join('');
 
-  const excelHtml = `
+  return `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
     <head>
       <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -500,8 +525,11 @@ export function exportLeadsToExcel(leads: AdminLead[]): void {
       </table>
     </body>
     </html>
-  `;
+  `.trim();
+}
 
+export function exportLeadsToExcel(leads: AdminLead[]): void {
+  const excelHtml = getExcelWorkbookHtml(leads);
   const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

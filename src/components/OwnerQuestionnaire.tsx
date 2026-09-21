@@ -55,54 +55,81 @@ export default function OwnerQuestionnaire({
 
   // STEP STATE: 0=Intro, 1..14=Questions, 15=Suspense calculation, 16=VIP Pass
   const [step, setStep] = useState<number>(() => {
-    if (savedDraft?.step && savedDraft.step > 0 && savedDraft.step <= 14) {
+    if (savedDraft?.step && savedDraft.step > 0 && savedDraft.step <= 10) {
       return savedDraft.step;
     }
     return 0;
   });
-  const totalSteps = 14;
+  const totalSteps = 10;
+
+  // Active pet tab index when multiple animals are selected (Max 3)
+  const [activePetIndex, setActivePetIndex] = useState<number>(0);
 
   // Selected preview photo index for showcase
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<{ [key: string]: number }>({});
 
   // ANSWERS STATE
-  const [answers, setAnswers] = useState<OwnerAnswers>(() => ({
-    animalTypes: savedDraft?.answers?.animalTypes || [],
-    petName: savedDraft?.answers?.petName || userProfile?.petName || '',
-    petBreed: savedDraft?.answers?.petBreed || userProfile?.petBreed || '',
-    petAge: savedDraft?.answers?.petAge || '',
-    petWeight: savedDraft?.answers?.petWeight || '',
-    petSex: savedDraft?.answers?.petSex || (userProfile?.petSex === 'male' ? (isRtl ? 'ذكر' : 'Mâle') : userProfile?.petSex === 'female' ? (isRtl ? 'أنثى' : 'Femelle') : ''),
-    isVaccinated: savedDraft?.answers?.isVaccinated || '',
-    rabiesVaccinated: savedDraft?.answers?.rabiesVaccinated || '',
-    dewormingFrequency: savedDraft?.answers?.dewormingFrequency || '',
-    isNeutered: savedDraft?.answers?.isNeutered || '',
-    dietType: savedDraft?.answers?.dietType || '',
-    feedingSource: savedDraft?.answers?.feedingSource || '',
-    previousSurgeries: savedDraft?.answers?.previousSurgeries || '',
-    antiParasiteTreatment: savedDraft?.answers?.antiParasiteTreatment || '',
-    behaviorTraits: savedDraft?.answers?.behaviorTraits || [],
-    playTimeDaily: savedDraft?.answers?.playTimeDaily || '',
-    emergencyExperience: savedDraft?.answers?.emergencyExperience || '',
-    hasFirstAidKit: savedDraft?.answers?.hasFirstAidKit || '',
-    visitFrequency: savedDraft?.answers?.visitFrequency || '',
-    mainChallenges: savedDraft?.answers?.mainChallenges || [],
-    annualBudgetDzd: savedDraft?.answers?.annualBudgetDzd || '',
-    wilaya: savedDraft?.answers?.wilaya || userProfile?.wilaya || '16 - Alger',
-    commune: savedDraft?.answers?.commune || userProfile?.commune || '',
-    expectedFeatures: savedDraft?.answers?.expectedFeatures || [],
-    ownerName: savedDraft?.answers?.ownerName || userProfile?.name || userProfile?.fullName || '',
-    ownerPhone: savedDraft?.answers?.ownerPhone || userProfile?.phone || '',
-    userSuggestions: savedDraft?.answers?.userSuggestions || '',
-    catLifestyle: savedDraft?.answers?.catLifestyle || '',
-    catFivFelvTested: savedDraft?.answers?.catFivFelvTested || '',
-    dogSize: savedDraft?.answers?.dogSize || '',
-    dogLeishmaniaProtection: savedDraft?.answers?.dogLeishmaniaProtection || ''
-  }));
+  const [answers, setAnswers] = useState<OwnerAnswers>(() => {
+    const defaultTypes = savedDraft?.answers?.animalTypes && savedDraft.answers.animalTypes.length > 0
+      ? savedDraft.answers.animalTypes.slice(0, 3)
+      : userProfile?.petType ? ['cat'] : [];
+    
+    const existingPets = savedDraft?.answers?.pets && savedDraft.answers.pets.length > 0
+      ? savedDraft.answers.pets
+      : defaultTypes.map((tId: string, idx: number) => ({
+          id: `pet-${tId}-${idx}`,
+          animalType: tId,
+          name: idx === 0 ? (savedDraft?.answers?.petName || userProfile?.petName || '') : '',
+          breed: idx === 0 ? (savedDraft?.answers?.petBreed || userProfile?.petBreed || '') : '',
+          age: idx === 0 ? (savedDraft?.answers?.petAge || '1 à 7 ans') : '1 à 7 ans',
+          sex: idx === 0 ? (savedDraft?.answers?.petSex || (isRtl ? 'ذكر' : 'Mâle')) : (isRtl ? 'ذكر' : 'Mâle'),
+          isNeutered: idx === 0 ? (savedDraft?.answers?.isNeutered || 'Non') : 'Non',
+          catLifestyle: 'interieur',
+          catFivFelvTested: 'non',
+          dogSize: 'moyen',
+          dogProtection: 'collier',
+          dietType: savedDraft?.answers?.dietType || 'Croquettes industrielles'
+        }));
+
+    return {
+      animalTypes: defaultTypes,
+      pets: existingPets,
+      petName: savedDraft?.answers?.petName || userProfile?.petName || existingPets[0]?.name || '',
+      petBreed: savedDraft?.answers?.petBreed || userProfile?.petBreed || existingPets[0]?.breed || '',
+      petAge: savedDraft?.answers?.petAge || '',
+      petWeight: savedDraft?.answers?.petWeight || '',
+      petSex: savedDraft?.answers?.petSex || (userProfile?.petSex === 'male' ? (isRtl ? 'ذكر' : 'Mâle') : userProfile?.petSex === 'female' ? (isRtl ? 'أنثى' : 'Femelle') : ''),
+      isVaccinated: savedDraft?.answers?.isVaccinated || '',
+      rabiesVaccinated: savedDraft?.answers?.rabiesVaccinated || '',
+      dewormingFrequency: savedDraft?.answers?.dewormingFrequency || '',
+      isNeutered: savedDraft?.answers?.isNeutered || '',
+      dietType: savedDraft?.answers?.dietType || '',
+      feedingSource: savedDraft?.answers?.feedingSource || '',
+      previousSurgeries: savedDraft?.answers?.previousSurgeries || '',
+      antiParasiteTreatment: savedDraft?.answers?.antiParasiteTreatment || '',
+      behaviorTraits: savedDraft?.answers?.behaviorTraits || [],
+      playTimeDaily: savedDraft?.answers?.playTimeDaily || '',
+      emergencyExperience: savedDraft?.answers?.emergencyExperience || '',
+      hasFirstAidKit: savedDraft?.answers?.hasFirstAidKit || '',
+      visitFrequency: savedDraft?.answers?.visitFrequency || '',
+      mainChallenges: savedDraft?.answers?.mainChallenges || [],
+      annualBudgetDzd: savedDraft?.answers?.annualBudgetDzd || '',
+      wilaya: savedDraft?.answers?.wilaya || userProfile?.wilaya || '16 - Alger',
+      commune: savedDraft?.answers?.commune || userProfile?.commune || '',
+      expectedFeatures: savedDraft?.answers?.expectedFeatures || [],
+      ownerName: savedDraft?.answers?.ownerName || userProfile?.name || userProfile?.fullName || '',
+      ownerPhone: savedDraft?.answers?.ownerPhone || userProfile?.phone || '',
+      userSuggestions: savedDraft?.answers?.userSuggestions || '',
+      catLifestyle: savedDraft?.answers?.catLifestyle || 'interieur',
+      catFivFelvTested: savedDraft?.answers?.catFivFelvTested || 'non',
+      dogSize: savedDraft?.answers?.dogSize || 'moyen',
+      dogLeishmaniaProtection: savedDraft?.answers?.dogLeishmaniaProtection || ''
+    };
+  });
 
   // Autosave answers & step to localStorage
   useEffect(() => {
-    if (step >= 1 && step <= 14) {
+    if (step >= 1 && step <= 10) {
       try {
         localStorage.setItem(OWNER_DRAFT_STORAGE_KEY, JSON.stringify({
           step,
@@ -150,16 +177,91 @@ export default function OwnerQuestionnaire({
     ? 'farm' 
     : answers.animalTypes[0] || 'cat';
 
-  // Toggle multi-select animal types
+  // Toggle multi-select animal types (Max 3)
   const toggleAnimalType = (typeId: string) => {
     soundEngine.playPop();
     setValidationError(null);
     setAnswers(prev => {
       const exists = prev.animalTypes.includes(typeId);
-      const next = exists 
+      if (!exists && prev.animalTypes.length >= 3) {
+        triggerShake(
+          isRtl 
+            ? 'يمكنك اختيار 3 حيوانات كحد أقصى (Max 3) لإنشاء استمارة منفصلة لكل واحد منها.'
+            : 'Vous pouvez sélectionner 3 animaux au maximum (Max 3) pour créer une fiche personnalisée par compagnon.'
+        );
+        return prev;
+      }
+      const nextTypes = exists 
         ? prev.animalTypes.filter(id => id !== typeId)
         : [...prev.animalTypes, typeId];
-      return { ...prev, animalTypes: next };
+
+      const currentPets = prev.pets || [];
+      const updatedPets = nextTypes.map((tId, idx) => {
+        const existing = currentPets.find(p => p.animalType === tId);
+        if (existing) return existing;
+        return {
+          id: `pet-${tId}-${Date.now()}-${idx}`,
+          animalType: tId,
+          name: idx === 0 && prev.petName ? prev.petName : '',
+          breed: idx === 0 && prev.petBreed ? prev.petBreed : '',
+          age: idx === 0 && prev.petAge ? prev.petAge : '1 à 7 ans',
+          sex: idx === 0 && prev.petSex ? prev.petSex : (isRtl ? 'ذكر' : 'Mâle'),
+          isNeutered: idx === 0 && prev.isNeutered ? prev.isNeutered : 'Non',
+          catLifestyle: 'interieur' as const,
+          catFivFelvTested: 'non' as const,
+          dogSize: 'moyen' as const,
+          dogProtection: 'collier',
+          dietType: prev.dietType || 'Croquettes industrielles'
+        };
+      });
+
+      if (activePetIndex >= nextTypes.length) {
+        setActivePetIndex(Math.max(0, nextTypes.length - 1));
+      }
+
+      return { 
+        ...prev, 
+        animalTypes: nextTypes,
+        pets: updatedPets,
+        petName: updatedPets[0]?.name || prev.petName
+      };
+    });
+  };
+
+  // Helper to update field on currently active pet in multi-pet questionnaire
+  const updateCurrentPetField = (field: string, value: any) => {
+    setAnswers(prev => {
+      const petsList = [...(prev.pets || [])];
+      const curType = prev.animalTypes[activePetIndex] || 'cat';
+      if (!petsList[activePetIndex]) {
+        petsList[activePetIndex] = {
+          id: `pet-${curType}-${Date.now()}`,
+          animalType: curType,
+          name: ''
+        };
+      }
+      petsList[activePetIndex] = {
+        ...petsList[activePetIndex],
+        [field]: value
+      };
+
+      const nextAnswers: OwnerAnswers = {
+        ...prev,
+        pets: petsList
+      };
+
+      // Keep root fields in sync with primary pet for legacy / display compatibility
+      if (activePetIndex === 0) {
+        if (field === 'name') nextAnswers.petName = value;
+        if (field === 'breed') nextAnswers.petBreed = value;
+        if (field === 'age') nextAnswers.petAge = value;
+        if (field === 'sex') nextAnswers.petSex = value;
+        if (field === 'isNeutered') nextAnswers.isNeutered = value;
+        if (field === 'catLifestyle') nextAnswers.catLifestyle = value;
+        if (field === 'catFivFelvTested') nextAnswers.catFivFelvTested = value;
+        if (field === 'dogSize') nextAnswers.dogSize = value;
+      }
+      return nextAnswers;
     });
   };
 
@@ -240,24 +342,37 @@ export default function OwnerQuestionnaire({
           return false;
         }
         break;
-      case 2:
-        if (!answers.petName?.trim()) {
-          triggerShake(
-            isRtl 
-              ? 'يرجى كتابة اسم حيوانك الأليف.'
-              : 'Veuillez renseigner le nom de votre animal.'
-          );
-          return false;
-        }
-        if (!answers.petAge) {
-          triggerShake(
-            isRtl 
-              ? 'يرجى تحديد الفئة العمرية للحيوان.'
-              : 'Veuillez sélectionner la tranche d’âge de votre animal.'
-          );
-          return false;
+      case 2: {
+        const types = answers.animalTypes || [];
+        const petsList = answers.pets || [];
+        if (types.length > 1) {
+          for (let i = 0; i < types.length; i++) {
+            const p = petsList[i];
+            const opt = animalChoices.find(c => c.id === types[i]);
+            const label = opt?.title || `Animal #${i + 1}`;
+            if (!p?.name?.trim()) {
+              setActivePetIndex(i);
+              triggerShake(
+                isRtl 
+                  ? `يرجى كتابة اسم الرفيق (${label}) في الاستمارة رقم ${i + 1}.`
+                  : `Veuillez renseigner le prénom de votre ${label} (Animal ${i + 1}/${types.length}).`
+              );
+              return false;
+            }
+          }
+        } else {
+          const mainName = petsList[0]?.name || answers.petName;
+          if (!mainName?.trim()) {
+            triggerShake(
+              isRtl 
+                ? 'يرجى كتابة اسم حيوانك الأليف.'
+                : 'Veuillez renseigner le nom de votre animal.'
+            );
+            return false;
+          }
         }
         break;
+      }
       case 3:
         if (!answers.dietType) {
           triggerShake(
@@ -819,19 +934,34 @@ export default function OwnerQuestionnaire({
             </div>
           )}
 
-          {/* STEP 1: ANIMAL SELECTION WITH HD PHOTO CARDS */}
+          {/* STEP 1: ANIMAL SELECTION (MAX 3 - NO BROKEN PHOTO CARDS) */}
           {step === 1 && (
             <div className="space-y-6">
-              <div>
-                <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest">
-                  {isRtl ? `المرحلة 1 من ${totalSteps} · اختيار الرفقاء` : `Étape 1 sur ${totalSteps} · Choix des Animaux`}
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
-                  {isRtl ? 'أي نوع من الحيوانات يشاركك حياتك اليومية ؟' : 'Quels compagnons partagent votre quotidien ?'}
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-300 mt-1">
-                  {isRtl ? 'يمكنك اختيار أكثر من حيوان بالضغط على البطاقات المصورة أدناه.' : 'Sélectionnez un ou plusieurs animaux en cliquant sur leurs photos illustrées.'}
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest">
+                    {isRtl ? `المرحلة 1 من ${totalSteps} · اختيار الرفقاء` : `Étape 1 sur ${totalSteps} · Choix des Animaux`}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
+                    {isRtl ? 'أي نوع من الحيوانات يشاركك حياتك اليومية ؟' : 'Quels compagnons partagent votre quotidien ?'}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                    {isRtl 
+                      ? 'اختر الحيوانات التي تربيها (3 كحد أقصى). سيتم إنشاء استمارة مخصصة لكل حيوان تختاره.' 
+                      : 'Sélectionnez vos compagnons (3 maximum). Une fiche personnalisée sera générée pour chacun.'}
+                  </p>
+                </div>
+                
+                {/* Max 3 Badge */}
+                <div className={`self-start sm:self-center px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                  answers.animalTypes.length === 3 
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-lg shadow-amber-500/10' 
+                    : answers.animalTypes.length > 0
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                    : 'bg-slate-800 text-slate-400 border-white/10'
+                }`}>
+                  {answers.animalTypes.length}/3 {isRtl ? 'حيوانات مختارة (أقصى حد: 3)' : 'animaux choisis (Max 3)'}
+                </div>
               </div>
 
               {/* Photo Cards Grid */}
@@ -859,7 +989,7 @@ export default function OwnerQuestionnaire({
                       {/* Gradient Vignette for perfect text readability */}
                       <div className={`absolute inset-0 transition-opacity duration-300 ${
                         isSelected 
-                          ? 'bg-gradient-to-t from-slate-950 via-slate-950/60 to-cyan-950/40 opacity-95' 
+                          ? 'bg-gradient-to-t from-slate-950 via-slate-950/70 to-cyan-950/40 opacity-95' 
                           : 'bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent opacity-90 group-hover:opacity-85'
                       }`} />
 
@@ -885,162 +1015,598 @@ export default function OwnerQuestionnaire({
                 })}
               </div>
 
-              {/* Dynamic Photo Showcase for Selected Animal */}
+              {/* Dynamic helper notification */}
               {answers.animalTypes.length > 0 && (
-                <div className="p-4 rounded-3xl bg-slate-900/80 border border-cyan-500/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
-                      <Camera className="w-4 h-4 text-cyan-400" />
-                      <span>{isRtl ? `معرض السلالات المتاحة (${answers.animalTypes.length} مختار)` : `Galerie des profils sélectionnés (${answers.animalTypes.length} choisis)`}</span>
+                <div className="p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between text-xs text-cyan-200">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>
+                      {isRtl 
+                        ? `ممتاز! تم اختيار ${answers.animalTypes.length} حيوان. في الخطوة التالية، ستملأ استمارة خاصة بكل نوع على حدة.` 
+                        : `Parfait ! ${answers.animalTypes.length} espèce(s) sélectionnée(s). À l'étape suivante, vous configurerez une fiche individuelle pour chaque animal.`}
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono">HD Photography DZ</span>
                   </div>
-
-                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-                    {answers.animalTypes.map(animId => {
-                      const photos = (ANIMAL_SHOWCASE_PHOTOS as any)[animId] || [];
-                      return photos.map((photo: any, idx: number) => (
-                        <div 
-                          key={`${animId}-${idx}`}
-                          className="shrink-0 w-36 sm:w-44 rounded-2xl overflow-hidden border border-white/10 bg-slate-950 relative group"
-                        >
-                          <img 
-                            src={photo.url} 
-                            alt={photo.label}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-24 sm:h-28 object-cover group-hover:scale-105 transition-transform duration-500" 
-                          />
-                          <div className="p-2 text-[10px] text-slate-300 font-medium truncate bg-slate-950/90">
-                            {photo.label}
-                          </div>
-                        </div>
-                      ));
-                    })}
-                  </div>
+                  {answers.animalTypes.length >= 3 && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                      Limite Max 3 atteinte
+                    </span>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          {/* STEP 2: PET IDENTITY & DETAILS */}
-          {step === 2 && (
-            <div className="space-y-6">
-              <div>
-                <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest">
-                  {isRtl ? `المرحلة 2 من ${totalSteps} · بيانات الرفيق` : `Étape 2 sur ${totalSteps} · Fiche Compagnon`}
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
-                  {isRtl ? 'أخبرنا عن رفيقك الرئيسي' : 'Présentez-nous votre animal principal'}
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-300 mt-1">
-                  {isRtl ? 'ستسجل هذه المعلومات في الدفتر الصحي الرقمي الرسمي.' : 'Ces informations figureront sur votre futur carnet de santé numérique DiaVet.'}
-                </p>
-              </div>
+          {/* STEP 2: DYNAMIC PET FORMS (TAILORED ACCORDING TO EACH SELECTED SPECIES - MAX 3) */}
+          {step === 2 && (() => {
+            const selectedTypes = answers.animalTypes.length > 0 ? answers.animalTypes : ['cat'];
+            const safeActiveIdx = Math.min(activePetIndex, selectedTypes.length - 1);
+            const currentType = selectedTypes[safeActiveIdx] || 'cat';
+            const currentPetOpt = animalChoices.find(c => c.id === currentType) || animalChoices[0];
+            const currentPet = answers.pets?.[safeActiveIdx] || {
+              id: `pet-${currentType}`,
+              animalType: currentType,
+              name: safeActiveIdx === 0 ? (answers.petName || '') : '',
+              breed: safeActiveIdx === 0 ? (answers.petBreed || '') : '',
+              age: safeActiveIdx === 0 ? (answers.petAge || '1 à 7 ans') : '1 à 7 ans',
+              sex: safeActiveIdx === 0 ? (answers.petSex || (isRtl ? 'ذكر' : 'Mâle')) : (isRtl ? 'ذكر' : 'Mâle'),
+              isNeutered: safeActiveIdx === 0 ? (answers.isNeutered || 'Non') : 'Non',
+              catLifestyle: answers.catLifestyle || 'interieur',
+              catFivFelvTested: answers.catFivFelvTested || 'non',
+              dogSize: answers.dogSize || 'moyen'
+            };
 
-              <div className="space-y-4">
-                {userProfile?.petName && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                    <span>{isRtl ? "تم نقل اسم وسلالة الحيوان تلقائياً من تسجيلك دون الحاجة لإعادة الكتابة" : "Nom et profil de l'animal synchronisés depuis votre inscription"}</span>
+            return (
+              <div className="space-y-6">
+                <div>
+                  <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest">
+                    {isRtl ? `المرحلة 2 من ${totalSteps} · بيانات الرفقاء` : `Étape 2 sur ${totalSteps} · Fiches Animaux`}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white mt-1 flex items-center gap-2">
+                    <span>{currentPetOpt.icon}</span>
+                    <span>
+                      {selectedTypes.length > 1
+                        ? (isRtl ? `استمارة الرفيق (${safeActiveIdx + 1}/${selectedTypes.length}) : ${currentPetOpt.title}` : `Fiche de votre ${currentPetOpt.title} (${safeActiveIdx + 1}/${selectedTypes.length})`)
+                        : (isRtl ? `بيانات ${currentPetOpt.title}` : `Présentez-nous votre ${currentPetOpt.title}`)}
+                    </span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                    {isRtl 
+                      ? 'أسئلة مخصصة تكيّف تلقائياً حسب نوع كل حيوان اخترته.' 
+                      : 'Questions adaptées sur-mesure aux besoins spécifiques de chaque compagnon sélectionné.'}
+                  </p>
+                </div>
+
+                {/* Multi-Pet Tab Switcher when 2 or 3 animals selected */}
+                {selectedTypes.length > 1 && (
+                  <div className="p-2 rounded-2xl bg-slate-900/90 border border-white/10 flex items-center gap-2 overflow-x-auto scrollbar-none">
+                    {selectedTypes.map((tId, idx) => {
+                      const opt = animalChoices.find(c => c.id === tId);
+                      const petData = answers.pets?.[idx];
+                      const isCurrent = safeActiveIdx === idx;
+                      const hasName = Boolean(petData?.name?.trim());
+                      return (
+                        <button
+                          key={`${tId}-${idx}`}
+                          type="button"
+                          onClick={() => {
+                            soundEngine.playPop();
+                            setActivePetIndex(idx);
+                          }}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                            isCurrent
+                              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30 scale-102 font-black'
+                              : hasName
+                              ? 'bg-emerald-950/50 border border-emerald-500/30 text-emerald-300 hover:border-emerald-400'
+                              : 'bg-slate-800 text-slate-300 hover:text-white border border-white/5'
+                          }`}
+                        >
+                          <span className="text-base">{opt?.icon}</span>
+                          <span>{petData?.name ? petData.name : `${opt?.title || 'Animal'} #${idx + 1}`}</span>
+                          {hasName ? (
+                            <Check className={`w-3.5 h-3.5 ${isCurrent ? 'text-slate-950' : 'text-emerald-400'} stroke-[3]`} />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 
-                <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                    {isRtl ? 'اسم الحيوان الأليف *' : 'Prénom ou nom de l\'animal *'}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={isRtl ? 'مثال: لونا، ميلو، سيمبا، مكس، سلطان...' : 'Ex: Max, Milo, Luna, Sultan, Rocky...'}
-                    value={answers.petName}
-                    onChange={e => setAnswers({ ...answers, petName: e.target.value })}
-                    className="w-full p-3.5 rounded-2xl bg-slate-900 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-400"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Form Card for Current Pet */}
+                <div className="p-5 sm:p-6 rounded-3xl bg-slate-900/90 border border-cyan-500/20 space-y-4 shadow-xl">
+                  {/* Name Input */}
                   <div>
                     <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                      {isRtl ? 'السلالة أو النوع (اختياري)' : 'Race ou croisement (Optionnel)'}
+                      {isRtl 
+                        ? `اسم الـ ${currentPetOpt.title} *` 
+                        : `Prénom ou nom de votre ${currentPetOpt.title} *`}
                     </label>
                     <input
                       type="text"
-                      placeholder={isRtl ? 'مثال: قط شيرازي، راعي ألماني، بلدي...' : 'Ex: Berger Allemand, Européen, Angora, Barbe...'}
-                      value={answers.petBreed || ''}
-                      onChange={e => setAnswers({ ...answers, petBreed: e.target.value })}
-                      className="w-full p-3.5 rounded-2xl bg-slate-900 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-400"
+                      required
+                      placeholder={
+                        currentType === 'cat' 
+                          ? (isRtl ? 'مثال: لونا، مياو، سيمبا، تايغر...' : 'Ex: Milo, Luna, Simba, Nala, Caramel...')
+                          : currentType === 'dog'
+                          ? (isRtl ? 'مثال: ريكس، ماكس، بوب، سلطان...' : 'Ex: Max, Rex, Rocky, Maya, Sultan...')
+                          : currentType === 'bird'
+                          ? (isRtl ? 'مثال: حبيب، طاطا، بوبو، أو رقم الحلقة...' : 'Ex: Maknin, Kiwi, Rio, ou N° de bague...')
+                          : (isRtl ? 'اسم الرفيق...' : 'Ex: Nom du compagnon...')
+                      }
+                      value={currentPet.name || ''}
+                      onChange={e => updateCurrentPetField('name', e.target.value)}
+                      className="w-full p-3.5 rounded-2xl bg-slate-950 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-400 font-semibold"
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                      {isRtl ? 'جنس الحيوان' : 'Sexe de l\'animal'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { label: isRtl ? 'ذكر' : 'Mâle', icon: '♂️' },
-                        { label: isRtl ? 'أنثى' : 'Femelle', icon: '♀️' }
-                      ].map(s => (
-                        <FuturisticBubble
-                          key={s.label}
-                          label={s.label}
-                          icon={s.icon}
-                          isRtl={isRtl}
-                          selected={answers.petSex === s.label}
-                          onClick={() => {
-                            soundEngine.playPop();
-                            setAnswers({ ...answers, petSex: s.label });
-                          }}
-                        />
-                      ))}
+                  {/* SPECIFIC QUESTIONS: CAT (Chat d'intérieur / extérieur / semi-liberté) */}
+                  {currentType === 'cat' && (
+                    <div className="space-y-4 pt-2">
+                      {/* Chat d'intérieur vs extérieur */}
+                      <div>
+                        <label className="text-xs font-bold text-cyan-300 block mb-1.5 flex items-center gap-1.5">
+                          <span>🏠</span>
+                          <span>{isRtl ? 'نمط حياة القط : هل هو قط منزلي داخلي أم يخرج للشارع والحديقة ؟ *' : 'Mode de vie du chat : Vit-il à l\'intérieur ou sort-il dehors ? *'}</span>
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          {[
+                            { 
+                              id: 'interieur', 
+                              label: isRtl ? 'قط منزلي داخلي (شقة)' : 'Chat d\'intérieur (Appartement)', 
+                              sub: isRtl ? 'يعيش في الداخل حصراً، لا يخرج أبداً' : 'Vit à 100% en intérieur, ne sort jamais', 
+                              icon: '🛋️',
+                              color: 'cyan' as const
+                            },
+                            { 
+                              id: 'exterieur', 
+                              label: isRtl ? 'قط خارجي (حديقة / حر)' : 'Chat d\'extérieur (Jardin / Rue)', 
+                              sub: isRtl ? 'يخرج بحرية ويتجول خارج المنزل' : 'Accès libre à l\'extérieur et exploration', 
+                              icon: '🌳',
+                              color: 'emerald' as const
+                            },
+                            { 
+                              id: 'semi_liberte', 
+                              label: isRtl ? 'نمط مختلط (شبه حرية)' : 'Semi-liberté (Sorties surveillées)', 
+                              sub: isRtl ? 'يعيش في المنزل مع خروج محدود' : 'Vie en maison avec sorties régulières', 
+                              icon: '🏡',
+                              color: 'purple' as const
+                            }
+                          ].map(opt => (
+                            <FuturisticBubble
+                              key={opt.id}
+                              label={opt.label}
+                              sublabel={opt.sub}
+                              icon={opt.icon}
+                              color={opt.color}
+                              isRtl={isRtl}
+                              selected={(currentPet.catLifestyle || answers.catLifestyle) === opt.id}
+                              onClick={() => {
+                                soundEngine.playPop();
+                                updateCurrentPetField('catLifestyle', opt.id);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Race & FIV/FeLV test */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                            {isRtl ? 'سلالة القط (اختياري)' : 'Race du chat'}
+                          </label>
+                          <select
+                            value={currentPet.breed || ''}
+                            onChange={e => updateCurrentPetField('breed', e.target.value)}
+                            className="w-full p-3.5 rounded-2xl bg-slate-950 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400"
+                          >
+                            <option value="">{isRtl ? 'اختر السلالة...' : 'Sélectionner la race...'}</option>
+                            <option value="Européen / Gouttière">Européen / Chat de gouttière (Beldi DZ)</option>
+                            <option value="Persan">Persan (Shirazi)</option>
+                            <option value="Angora Turc">Angora Turc</option>
+                            <option value="Siamois">Siamois</option>
+                            <option value="Chartreux">Chartreux</option>
+                            <option value="British Shorthair">British Shorthair</option>
+                            <option value="Maine Coon">Maine Coon</option>
+                            <option value="Autre / Croisé">Autre race / Croisé</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                            {isRtl ? 'هل تم فحص القط ضد فيروس نقص المناعة FIV / FeLV ؟' : 'Test FIV / FeLV (Sida & Leucose du chat)'}
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'oui', label: isRtl ? 'نعم (سلبي)' : 'Testé négatif', icon: '🛡️' },
+                              { id: 'non', label: isRtl ? 'غير مفحوص' : 'Non testé', icon: '❓' },
+                              { id: 'ignore', label: isRtl ? 'لا أعلم' : 'Je ne sais pas', icon: '📋' }
+                            ].map(test => (
+                              <button
+                                key={test.id}
+                                type="button"
+                                onClick={() => {
+                                  soundEngine.playPop();
+                                  updateCurrentPetField('catFivFelvTested', test.id);
+                                }}
+                                className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
+                                  (currentPet.catFivFelvTested || answers.catFivFelvTested) === test.id
+                                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                                    : 'bg-slate-950 border-white/10 text-slate-300 hover:border-white/20'
+                                }`}
+                              >
+                                <div>{test.icon}</div>
+                                <div className="mt-1 truncate">{test.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SPECIFIC QUESTIONS: DOG (Taille, race, garde) */}
+                  {currentType === 'dog' && (
+                    <div className="space-y-4 pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-cyan-300 block mb-1.5">
+                            {isRtl ? 'حجم وقامة الكلب *' : 'Gabarit / Taille du chien *'}
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'petit', label: isRtl ? 'صغير (< 10 كغ)' : 'Petit (< 10 kg)', icon: '🐕' },
+                              { id: 'moyen', label: isRtl ? 'متوسط (10-25 كغ)' : 'Moyen (10-25 kg)', icon: '🐕‍🦺' },
+                              { id: 'grand', label: isRtl ? 'كبير (> 25 كغ)' : 'Grand (> 25 kg)', icon: '🦮' }
+                            ].map(sz => (
+                              <button
+                                key={sz.id}
+                                type="button"
+                                onClick={() => {
+                                  soundEngine.playPop();
+                                  updateCurrentPetField('dogSize', sz.id);
+                                }}
+                                className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
+                                  (currentPet.dogSize || answers.dogSize) === sz.id
+                                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                                    : 'bg-slate-950 border-white/10 text-slate-300 hover:border-white/20'
+                                }`}
+                              >
+                                <div>{sz.icon}</div>
+                                <div className="mt-1">{sz.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                            {isRtl ? 'سلالة الكلب' : 'Race du chien'}
+                          </label>
+                          <select
+                            value={currentPet.breed || ''}
+                            onChange={e => updateCurrentPetField('breed', e.target.value)}
+                            className="w-full p-3.5 rounded-2xl bg-slate-950 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400"
+                          >
+                            <option value="">{isRtl ? 'اختر السلالة...' : 'Sélectionner la race...'}</option>
+                            <option value="Berger Allemand">Berger Allemand</option>
+                            <option value="Berger Belge Malinois">Berger Belge Malinois</option>
+                            <option value="Sloughi">Sloughi (Lévrier Berbère DZ 🇩🇿)</option>
+                            <option value="Golden Retriever / Labrador">Golden Retriever / Labrador</option>
+                            <option value="Rottweiler">Rottweiler</option>
+                            <option value="Husky Sibérien">Husky Sibérien</option>
+                            <option value="Caniche / Bichon">Caniche / Bichon</option>
+                            <option value="Croisé / Bâtard">Croisé / Bâtard</option>
+                            <option value="Autre">Autre race</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Leishmania Protection (Major DZ endemic concern) */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                          {isRtl ? 'الوقاية من الليشمانيا ولسعات ذبابة الرمل (Collier anti-phlébotomes DZ)' : 'Protection contre la Leishmaniose (Collier antiparasitaire / Pipettes DZ)'}
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {[
+                            { label: isRtl ? 'طوق واقٍ (Scalibor / Seresto)' : 'Collier répulsif Scalibor/Seresto', icon: '🛡️' },
+                            { label: isRtl ? 'أمبولات موضعية (Pipettes)' : 'Pipettes mensuelles', icon: '💧' },
+                            { label: isRtl ? 'لا أستعمل حماية حالياً' : 'Pas de protection pour l\'instant', icon: '⚠️' }
+                          ].map(prot => (
+                            <button
+                              key={prot.label}
+                              type="button"
+                              onClick={() => {
+                                soundEngine.playPop();
+                                updateCurrentPetField('dogProtection', prot.label);
+                              }}
+                              className={`p-2.5 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer flex items-center gap-2 ${
+                                currentPet.dogProtection === prot.label
+                                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold'
+                                  : 'bg-slate-950 border-white/10 text-slate-300 hover:border-white/20'
+                              }`}
+                            >
+                              <span>{prot.icon}</span>
+                              <span className="truncate">{prot.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SPECIFIC QUESTIONS: BIRD (Chardonneret / Maknin DZ, Canari, Perruche) */}
+                  {currentType === 'bird' && (
+                    <div className="space-y-4 pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-cyan-300 block mb-1.5">
+                            {isRtl ? 'نوع الطائر *' : 'Espèce d\'oiseau *'}
+                          </label>
+                          <select
+                            value={currentPet.birdSpecies || ''}
+                            onChange={e => updateCurrentPetField('birdSpecies', e.target.value)}
+                            className="w-full p-3.5 rounded-2xl bg-slate-950 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400 font-semibold"
+                          >
+                            <option value="">{isRtl ? 'اختر فصيلة الطائر...' : 'Sélectionner l\'espèce...'}</option>
+                            <option value="Chardonneret (Maknin / Hassoun 🇩🇿)">Chardonneret Élégant (Maknin / Hassoun 🇩🇿)</option>
+                            <option value="Canari">Canari (Chanteur / Posture)</option>
+                            <option value="Perruche ondulée / Calopsitte">Perruche (Ondulée ou Calopsitte)</option>
+                            <option value="Inséparable (Agapornis)">Inséparable (Lovebird)</option>
+                            <option value="Perroquet Gris du Gabon / Amazone">Grand Perroquet (Gris du Gabon, Amazone)</option>
+                            <option value="Pigeon voyageur / Tourterelle">Pigeon voyageur / Tourterelle</option>
+                            <option value="Autre oiseau">Autre oiseau</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                            {isRtl ? 'مكان المعيشة' : 'Habitat'}
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { label: isRtl ? 'قفص داخلي' : 'Cage intérieure', icon: '🏠' },
+                              { label: isRtl ? 'سلاكة / فوليير' : 'Grande volière', icon: '🌿' }
+                            ].map(h => (
+                              <button
+                                key={h.label}
+                                type="button"
+                                onClick={() => {
+                                  soundEngine.playPop();
+                                  updateCurrentPetField('birdHabitat', h.label);
+                                }}
+                                className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
+                                  currentPet.birdHabitat === h.label
+                                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                                    : 'bg-slate-950 border-white/10 text-slate-300'
+                                }`}
+                              >
+                                <div>{h.icon}</div>
+                                <div className="mt-1">{h.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SPECIFIC QUESTIONS: RABBIT & RODENTS */}
+                  {currentType === 'rabbit' && (
+                    <div className="space-y-4 pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-cyan-300 block mb-1.5">
+                            {isRtl ? 'النوع (أرنب أو قارض) *' : 'Espèce du compagnon *'}
+                          </label>
+                          <select
+                            value={currentPet.breed || ''}
+                            onChange={e => updateCurrentPetField('breed', e.target.value)}
+                            className="w-full p-3.5 rounded-2xl bg-slate-950 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400"
+                          >
+                            <option value="">{isRtl ? 'اختر النوع...' : 'Sélectionner l\'espèce...'}</option>
+                            <option value="Lapin nain">Lapin nain / Bélier</option>
+                            <option value="Cochon d'Inde (Cobaye)">Cochon d'Inde (Cobaye)</option>
+                            <option value="Hamster">Hamster</option>
+                            <option value="Chinchilla">Chinchilla</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                            {isRtl ? 'توفر التبن يومياً (Foin à volonté)' : 'Foin de prairie disponible à volonté'}
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { label: isRtl ? 'نعم دائماً' : 'Oui, à volonté', icon: '🌾' },
+                              { label: isRtl ? 'أحياناً / كروكات فقط' : 'Parfois / Granulés', icon: '🥣' }
+                            ].map(f => (
+                              <button
+                                key={f.label}
+                                type="button"
+                                onClick={() => {
+                                  soundEngine.playPop();
+                                  updateCurrentPetField('hayAvailable', f.label);
+                                }}
+                                className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
+                                  currentPet.hayAvailable === f.label
+                                    ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold'
+                                    : 'bg-slate-950 border-white/10 text-slate-300'
+                                }`}
+                              >
+                                <div>{f.icon}</div>
+                                <div className="mt-1">{f.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SPECIFIC QUESTIONS: EQUINE / FARM */}
+                  {currentType === 'farm' && (
+                    <div className="space-y-4 pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-cyan-300 block mb-1.5">
+                            {isRtl ? 'سلالة الخيل أو الحيوان *' : 'Race équine ou élevage *'}
+                          </label>
+                          <select
+                            value={currentPet.breed || ''}
+                            onChange={e => updateCurrentPetField('breed', e.target.value)}
+                            className="w-full p-3.5 rounded-2xl bg-slate-950 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400"
+                          >
+                            <option value="">{isRtl ? 'اختر السلالة...' : 'Sélectionner la race...'}</option>
+                            <option value="Cheval Barbe Algérien 🇩🇿">Cheval Barbe Algérien 🇩🇿</option>
+                            <option value="Arabe-Barbe">Arabe-Barbe</option>
+                            <option value="Pur-Sang Arabe">Pur-Sang Arabe</option>
+                            <option value="Poney / Âne">Poney / Âne</option>
+                            <option value="Bovin / Ovin">Bovin / Ovin (Élevage)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                            {isRtl ? 'الاستخدام والنشاط' : 'Vocation principale'}
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { label: isRtl ? 'فنتازيا وتراث DZ' : 'Fantasia & Tradition DZ', icon: '🐎' },
+                              { label: isRtl ? 'ركوب وترفيه' : 'Équitation & Loisir', icon: '🏇' }
+                            ].map(v => (
+                              <button
+                                key={v.label}
+                                type="button"
+                                onClick={() => {
+                                  soundEngine.playPop();
+                                  updateCurrentPetField('equineActivity', v.label);
+                                }}
+                                className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
+                                  currentPet.equineActivity === v.label
+                                    ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold'
+                                    : 'bg-slate-950 border-white/10 text-slate-300'
+                                }`}
+                              >
+                                <div>{v.icon}</div>
+                                <div className="mt-1 truncate">{v.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* COMMON FIELDS: Sex, Age, Weight, Neutering */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-white/5">
+                    {/* Sexe */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                        {isRtl ? 'الجنس' : 'Sexe'}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: isRtl ? 'ذكر' : 'Mâle', icon: '♂️' },
+                          { label: isRtl ? 'أنثى' : 'Femelle', icon: '♀️' }
+                        ].map(s => (
+                          <button
+                            key={s.label}
+                            type="button"
+                            onClick={() => {
+                              soundEngine.playPop();
+                              updateCurrentPetField('sex', s.label);
+                            }}
+                            className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
+                              currentPet.sex === s.label
+                                ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                                : 'bg-slate-950 border-white/10 text-slate-300'
+                            }`}
+                          >
+                            <span>{s.icon} {s.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tranche d'age */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                        {isRtl ? 'العمر' : 'Tranche d\'âge'}
+                      </label>
+                      <select
+                        value={currentPet.age || ''}
+                        onChange={e => updateCurrentPetField('age', e.target.value)}
+                        className="w-full p-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:border-cyan-400"
+                      >
+                        <option value="< 1 an (Bébé / Junior)">🍼 &lt; 1 an (Junior / Chiot / Chaton)</option>
+                        <option value="1 à 7 ans (Adulte)">🐾 1 à 7 ans (Adulte)</option>
+                        <option value="> 7 ans (Senior)">👑 &gt; 7 ans (Senior)</option>
+                      </select>
+                    </div>
+
+                    {/* Stérilisé */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                        {isRtl ? 'التعقيم / الخصي' : 'Stérilisé(e)'}
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: isRtl ? 'نعم' : 'Oui', icon: '✂️' },
+                          { label: isRtl ? 'لا' : 'Non', icon: '⏳' }
+                        ].map(n => (
+                          <button
+                            key={n.label}
+                            type="button"
+                            onClick={() => {
+                              soundEngine.playPop();
+                              updateCurrentPetField('isNeutered', n.label);
+                            }}
+                            className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
+                              currentPet.isNeutered === n.label
+                                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold'
+                                : 'bg-slate-950 border-white/10 text-slate-300'
+                            }`}
+                          >
+                            <span>{n.icon} {n.label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                      {isRtl ? 'الفئة العمرية *' : 'Tranche d\'âge *'}
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {[
-                        { label: isRtl ? 'أقل من سنة' : '< 1 an', sub: isRtl ? 'صغير' : 'Chiot/Chaton', icon: '🍼' },
-                        { label: isRtl ? '1 إلى 7 سنوات' : '1 à 7 ans', sub: isRtl ? 'بالغ' : 'Adulte', icon: '🐾' },
-                        { label: isRtl ? '+7 سنوات' : '> 7 ans', sub: isRtl ? 'كبير' : 'Senior', icon: '👑' }
-                      ].map(age => (
-                        <FuturisticBubble
-                          key={age.label}
-                          label={age.label}
-                          sublabel={age.sub}
-                          icon={age.icon}
-                          isRtl={isRtl}
-                          selected={Boolean(answers.petAge?.includes(age.label))}
-                          onClick={() => {
-                            soundEngine.playPop();
-                            setAnswers({ ...answers, petAge: `${age.label} (${age.sub})` });
-                          }}
-                        />
-                      ))}
+                  {/* Multi-Pet Navigation CTA when there's an additional pet */}
+                  {selectedTypes.length > 1 && safeActiveIdx < selectedTypes.length - 1 && (
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!currentPet.name?.trim()) {
+                            triggerShake(
+                              isRtl 
+                                ? 'يرجى إدخال اسم هذا الحيوان قبل الانتقال للحيوان التالي.' 
+                                : 'Veuillez saisir le nom de cet animal avant de passer au suivant.'
+                            );
+                            return;
+                          }
+                          soundEngine.playSuccess();
+                          setActivePetIndex(safeActiveIdx + 1);
+                        }}
+                        className="w-full py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/20 transition-all"
+                      >
+                        <span>
+                          {isRtl 
+                            ? `حفظ والانتقال للحيوان التالي (${safeActiveIdx + 2}/${selectedTypes.length}) →` 
+                            : `Enregistrer et configurer l'animal suivant (${safeActiveIdx + 2}/${selectedTypes.length}) →`}
+                        </span>
+                      </button>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                      {isRtl ? 'الوزن التقريبي (كغ)' : 'Poids approximatif (kg)'}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={isRtl ? 'مثال: 4 كغ، 15 كغ، 30 كغ...' : 'Ex: 4.5 kg, 12 kg, 28 kg...'}
-                      value={answers.petWeight || ''}
-                      onChange={e => setAnswers({ ...answers, petWeight: e.target.value })}
-                      className="w-full p-3.5 rounded-2xl bg-slate-900 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-400"
-                    />
-                  </div>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* STEP 3: NUTRITION & FEEDING IN ALGERIA (WITH PHOTOS) */}
           {step === 3 && (

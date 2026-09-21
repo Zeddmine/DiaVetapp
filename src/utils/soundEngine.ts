@@ -212,14 +212,14 @@ class SoundEngine {
     this.bgmNotesInterval = setInterval(playArp, 650);
   }
 
-  // 2. MODE: NEO-VETERINARY ZEN (Gentle organic pentatonic chords, purr vibrations, calm clinical serenity)
+  // 2. MODE: NEO-VETERINARY ZEN (Gentle organic pentatonic chords, soothing bells, purr vibrations, calm clinical serenity)
   private startZenAmbient() {
     if (!this.ctx || !this.bgmGain) return;
     const zenChords = [
-      [146.83, 220.00, 293.66, 369.99], // D maj
-      [164.81, 246.94, 329.63, 392.00], // E min7
-      [196.00, 293.66, 369.99, 440.00], // G maj9
-      [146.83, 220.00, 293.66, 440.00], // D add9
+      [146.83, 220.00, 293.66, 369.99, 440.00], // D maj9
+      [164.81, 246.94, 329.63, 392.00, 493.88], // E min7(9)
+      [196.00, 293.66, 369.99, 440.00, 587.33], // G maj9
+      [146.83, 220.00, 293.66, 440.00, 554.37], // D add9 / F#
     ];
     let chordIdx = 0;
 
@@ -233,24 +233,86 @@ class SoundEngine {
         if (!this.ctx || !this.bgmGain) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
 
-        osc.type = 'triangle';
+        osc.type = i === 0 ? 'sine' : 'triangle';
         osc.frequency.setValueAtTime(freq, now);
 
-        gain.gain.setValueAtTime(0.001, now);
-        gain.gain.linearRampToValueAtTime(0.035 / (i + 1), now + 1.8);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 5.8);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(550, now);
 
-        osc.connect(gain);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(0.032 / (i + 1), now + 2.2);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 6.2);
+
+        osc.connect(filter);
+        filter.connect(gain);
         gain.connect(this.bgmGain);
 
         osc.start(now);
-        osc.stop(now + 6.0);
+        osc.stop(now + 6.4);
       });
     };
 
+    // Soft gentle chime melody (sweet lullaby bell notes for soothing pets and owners)
+    const chimeMelody = [440.00, 554.37, 659.25, 739.99, 880.00, 659.25, 554.37, 493.88];
+    let chimeIdx = 0;
+
+    const playZenChime = () => {
+      if (!this.ctx || !this.bgmGain || !this.isBgmPlaying) return;
+      const now = this.ctx.currentTime;
+      const noteFreq = chimeMelody[chimeIdx % chimeMelody.length];
+      chimeIdx++;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(noteFreq, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.015, now + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+
+      osc.connect(gain);
+      gain.connect(this.bgmGain);
+
+      osc.start(now);
+      osc.stop(now + 1.9);
+    };
+
     playZenChord();
-    this.bgmInterval = setInterval(playZenChord, 5500);
+    playZenChime();
+    this.bgmInterval = setInterval(playZenChord, 6000);
+    this.bgmNotesInterval = setInterval(playZenChime, 1800);
+  }
+
+  // Quick helper to start or toggle gentle relaxing music directly
+  public startDouceMusique() {
+    this.currentBgmMode = 'neo_zen';
+    try {
+      localStorage.setItem('diavet_bgm_mode', 'neo_zen');
+      localStorage.setItem('diavet_music_muted', 'false');
+    } catch {}
+    this.isMuted = false;
+    this.init();
+    if (this.bgmGain && this.ctx) {
+      this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.bgmGain.gain.setValueAtTime(0.20, this.ctx.currentTime);
+    }
+    if (this.isBgmPlaying) {
+      this.stopWelcomeMusic();
+    }
+    this.startWelcomeMusic();
+  }
+
+  public toggleDouceMusique(): boolean {
+    if (this.isBgmPlaying && !this.isMuted) {
+      this.toggleMute();
+      return false;
+    } else {
+      this.startDouceMusique();
+      return true;
+    }
   }
 
   // 3. MODE: FUTURE PULSE DZ (High tech cyber pulse arpeggios, energy rhythm)

@@ -6,10 +6,11 @@ import { tabContentVariants } from '../utils/transitions';
 import { 
   Heart, Calendar, AlertTriangle, ShieldCheck, 
   ChevronLeft, Plus, Phone, Clock, FileText, CheckCircle, Sparkles, MapPin, Award, ArrowRight,
-  Activity, Crown, Scan
+  Activity, Crown, Scan, Scale
 } from 'lucide-react';
 import FuturisticBioScanner from './FuturisticBioScanner';
 import HolographicVipCard from './HolographicVipCard';
+import PetWeightTracker from './PetWeightTracker';
 
 interface OwnerPortalPreviewProps {
   currentLang: Language;
@@ -27,7 +28,8 @@ export default function OwnerPortalPreview({
   onOpenProfile
 }: OwnerPortalPreviewProps) {
   const t = getTranslations(currentLang);
-  const [activeTab, setActiveTab] = useState<'health' | 'scanner' | 'appointments' | 'sos' | 'badges'>('health');
+  const [activeTab, setActiveTab] = useState<'health' | 'weight' | 'scanner' | 'appointments' | 'sos' | 'badges'>('health');
+  const [currentPetWeight, setCurrentPetWeight] = useState(28.4);
   const [bookedSuccess, setBookedSuccess] = useState(false);
   const [selectedDate, setSelectedDate] = useState('2026-09-25');
   const [selectedTime, setSelectedTime] = useState('10:30');
@@ -87,9 +89,14 @@ export default function OwnerPortalPreview({
           </p>
 
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mt-4 text-xs font-medium text-slate-300">
-            <div className="px-3 py-1 rounded-xl bg-white/[0.04] border border-white/5">
-              Poids : <span className="font-bold text-cyan-300">28.4 kg</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('weight')}
+              className="px-3 py-1 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-left transition-all cursor-pointer"
+              title="Cliquer pour voir le suivi de poids"
+            >
+              Poids : <span className="font-bold text-cyan-300">{currentPetWeight} kg</span>
+            </button>
             <div className="px-3 py-1 rounded-xl bg-white/[0.04] border border-white/5">
               Âge : <span className="font-bold text-cyan-300">3 ans</span>
             </div>
@@ -120,6 +127,17 @@ export default function OwnerPortalPreview({
           }`}
         >
           Carnet de Santé
+        </button>
+        <button
+          onClick={() => setActiveTab('weight')}
+          className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 flex items-center justify-center gap-1.5 ${
+            activeTab === 'weight'
+              ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 font-black shadow-md'
+              : 'text-cyan-300/80 hover:text-cyan-200'
+          }`}
+        >
+          <Scale className="w-3.5 h-3.5" />
+          <span>Suivi Poids</span>
         </button>
         <button
           onClick={() => setActiveTab('scanner')}
@@ -279,6 +297,24 @@ export default function OwnerPortalPreview({
                 </div>
               </div>
 
+              {/* Pet Weight Tracking & Recharts Graph */}
+              <PetWeightTracker 
+                petName={petName}
+                initialWeight={currentPetWeight}
+                onWeightChange={setCurrentPetWeight}
+              />
+
+            </div>
+          )}
+
+          {/* TAB: DEDICATED WEIGHT TRACKER */}
+          {activeTab === 'weight' && (
+            <div className="space-y-6">
+              <PetWeightTracker 
+                petName={petName}
+                initialWeight={currentPetWeight}
+                onWeightChange={setCurrentPetWeight}
+              />
             </div>
           )}
 

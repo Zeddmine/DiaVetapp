@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Cloud, CheckCircle, Loader2, AlertCircle, ArrowUpRight, Database, FileText } from 'lucide-react';
-import { googleSignIn, uploadIndexHtmlToDrive, uploadInscriptionsDataToDrive } from '../services/googleDrive';
-import { getAdminLeads, formatLeadsAsCsv } from '../services/adminDb';
+import { Cloud, CheckCircle, Loader2, AlertCircle, ArrowUpRight, Database, FileText, FileSpreadsheet } from 'lucide-react';
+import { googleSignIn, uploadIndexHtmlToDrive, uploadInscriptionsDataToDrive, uploadExcelToDrive } from '../services/googleDrive';
+import { getAdminLeads, formatLeadsAsCsv, getExcelWorkbookHtml } from '../services/adminDb';
 import { soundEngine } from '../utils/soundEngine';
 
 interface DriveSyncModalProps {
@@ -11,14 +11,14 @@ interface DriveSyncModalProps {
 
 export default function DriveSyncModal({ isOpen, onClose }: DriveSyncModalProps) {
   const [status, setStatus] = useState<'idle' | 'authorizing' | 'uploading' | 'success' | 'error'>('idle');
-  const [syncType, setSyncType] = useState<'all' | 'inscriptions' | 'html'>('all');
+  const [syncType, setSyncType] = useState<'all' | 'inscriptions' | 'excel' | 'html'>('all');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<{ id: string; name: string; webViewLink?: string } | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
 
   if (!isOpen) return null;
 
-  const handleStartDriveTransfer = async (type: 'all' | 'inscriptions' | 'html' = 'all') => {
+  const handleStartDriveTransfer = async (type: 'all' | 'inscriptions' | 'excel' | 'html' = 'all') => {
     soundEngine.playCyberClick();
     setSyncType(type);
     setStatus('authorizing');
@@ -35,10 +35,21 @@ export default function DriveSyncModal({ isOpen, onClose }: DriveSyncModalProps)
       setStatus('uploading');
 
       let lastUploadedFile: { id: string; name: string; webViewLink?: string } | null = null;
+      const leads = getAdminLeads();
+
+      // Upload Excel File (.xls)
+      if (type === 'all' || type === 'inscriptions' || type === 'excel') {
+        const excelContent = getExcelWorkbookHtml(leads);
+        const excelFile = await uploadExcelToDrive(
+          authResult.accessToken,
+          excelContent,
+          `DiaVet_Inscriptions_Registre_${new Date().toISOString().slice(0,10)}.xls`
+        );
+        lastUploadedFile = excelFile;
+      }
 
       // Upload Inscriptions Data if requested or ALL
       if (type === 'all' || type === 'inscriptions') {
-        const leads = getAdminLeads();
         const csvContent = formatLeadsAsCsv(leads);
         const jsonContent = JSON.stringify(leads, null, 2);
 
@@ -58,7 +69,7 @@ export default function DriveSyncModal({ isOpen, onClose }: DriveSyncModalProps)
           'application/json'
         );
 
-        lastUploadedFile = csvFile;
+        if (!lastUploadedFile) lastUploadedFile = csvFile;
       }
 
       // Upload Standalone HTML if requested or ALL
@@ -142,19 +153,26 @@ export default function DriveSyncModal({ isOpen, onClose }: DriveSyncModalProps)
                 <span>Synchroniser TOUT (Inscriptions + Application)</span>
               </button>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  onClick={() => handleStartDriveTransfer('excel')}
+                  className="py-3 px-3 rounded-xl font-bold text-xs bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-950/40"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <span>Fichier Excel (.xls)</span>
+                </button>
                 <button
                   onClick={() => handleStartDriveTransfer('inscriptions')}
-                  className="py-3 px-4 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="py-3 px-3 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <Database className="w-4 h-4 text-emerald-400" />
-                  <span>Inscriptions (CSV/JSON)</span>
+                  <Database className="w-4 h-4 text-cyan-400" />
+                  <span>Données (CSV/JSON)</span>
                 </button>
                 <button
                   onClick={() => handleStartDriveTransfer('html')}
-                  className="py-3 px-4 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="py-3 px-3 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
-                  <FileText className="w-4 h-4 text-cyan-400" />
+                  <FileText className="w-4 h-4 text-amber-400" />
                   <span>Code index.html</span>
                 </button>
               </div>
@@ -195,7 +213,7 @@ export default function DriveSyncModal({ isOpen, onClose }: DriveSyncModalProps)
               </div>
               <h4 className="text-base font-bold text-white">Transfert Cloud réussi avec succès !</h4>
               <p className="text-xs text-emerald-200/80 leading-relaxed">
-                Les fichiers d'inscriptions (<span className="font-mono font-bold text-emerald-300">CSV & JSON</span>) et le code source de l'application ont été synchronisés sur votre Google Drive (<span className="font-semibold text-white">{userEmail}</span>).
+                Le Registre Excel (<span className="font-mono font-bold text-emerald-300">.xls</span>), les inscriptions CSV/JSON et l'application ont été transférés avec succès sur votre Google Drive (<span className="font-semibold text-white">{userEmail}</span>).
               </p>
             </div>
 

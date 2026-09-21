@@ -56,6 +56,26 @@ export interface Article {
   isVetVerified: boolean;
 }
 
+export interface PetProfileItem {
+  id: string;
+  animalType: string; // 'chat' | 'chien' | 'oiseau' | 'rongeur' | 'cheval' | 'reptile' | 'bovins_ovins'
+  name: string;
+  breed?: string;
+  age?: string;
+  sex?: string;
+  isNeutered?: string;
+  catLifestyle?: string; // 'interieur' | 'exterieur' | 'mixte'
+  catFivFelvTested?: string;
+  dogSize?: string; // 'petit' | 'moyen' | 'grand'
+  dogProtection?: string;
+  birdSpecies?: string;
+  birdHabitat?: string;
+  rodentSpecies?: string;
+  equineUsage?: string;
+  dietType?: string;
+  notes?: string;
+}
+
 export interface UserProfile {
   name: string;
   fullName?: string;
@@ -71,6 +91,7 @@ export interface UserProfile {
   petType: string;
   petBreed?: string;
   petSex?: string;
+  pets?: PetProfileItem[];
   userRole?: 'owner' | 'vet';
   clinicName?: string;
   orderNumber?: string;
@@ -94,6 +115,7 @@ export interface PetTypeOption {
 
 export interface OwnerAnswers {
   animalTypes: string[];
+  pets?: PetProfileItem[];
   petName: string;
   petBreed?: string;
   petSex?: string;

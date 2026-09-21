@@ -30,6 +30,7 @@ import DriveSyncModal from './components/DriveSyncModal';
 import ExcelLeadsModal from './components/ExcelLeadsModal';
 import DiaVetTvSection from './components/DiaVetTvSection';
 import WhatsAppSupportButton from './components/WhatsAppSupportButton';
+import GentleMusicPlayer from './components/GentleMusicPlayer';
 import ProfileEditModal from './components/ProfileEditModal';
 import WelcomeAiBannerSection from './components/WelcomeAiBannerSection';
 import { recordRegistrationLead } from './services/adminDb';
@@ -1205,6 +1206,11 @@ export default function App() {
 
       {/* WHATSAPP SUPPORT FLOAT BUTTON (WAA DZ) */}
       <WhatsAppSupportButton
+        currentLang={currentLang}
+      />
+
+      {/* AMBIENT GENTLE ZEN MUSIC PLAYER */}
+      <GentleMusicPlayer
         currentLang={currentLang}
       />
 
