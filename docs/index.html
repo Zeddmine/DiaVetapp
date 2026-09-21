@@ -12,9 +12,19 @@
     <meta name="description" content="Plateforme numérique vétérinaire pour l'Algérie connectant propriétaires et vétérinaires avec carnet de santé, système de badges et jalons santé, articles et conseils cliniques, et annuaire d'urgences." />
     <link rel="icon" type="image/x-icon" href="./favicon.ico" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <script type="module" crossorigin src="./assets/index-DnOs-mLg.js"></script>
+    <script>
+      // Clear legacy service worker interception immediately on load
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (var i = 0; i < registrations.length; i++) {
+            registrations[i].unregister();
+          }
+        });
+      }
+    </script>
+    <script type="module" crossorigin src="./assets/index-DRLdIW1g.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-DdY9p_4z.css">
-  <link rel="manifest" href="./manifest.webmanifest"></head>
+  <link rel="manifest" href="./manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="./registerSW.js"></script></head>
   <body class="bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white overscroll-none overflow-x-hidden" style="background-color: #020617;">
     <div id="root">
       <!-- Instant 0ms Dark Splash Screen prevents white flash on mobile home screen launcher -->
@@ -30,28 +40,5 @@
         <style>@keyframes loadingBar{0%{transform:translate(-100%)}to{transform:translate(100%)}}</style>
       </div>
     </div>
-    <script>
-      (function() {
-        const CURRENT_VERSION = 'diavet-v2.1.2';
-        const storedVersion = localStorage.getItem('diavet_cache_version');
-        if (storedVersion !== CURRENT_VERSION) {
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              for (let name of names) {
-                caches.delete(name);
-              }
-            });
-          }
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              for (let reg of registrations) {
-                reg.unregister();
-              }
-            });
-          }
-          localStorage.setItem('diavet_cache_version', CURRENT_VERSION);
-        }
-      })();
-    </script>
   </body>
 </html>
