@@ -249,7 +249,7 @@ export default function DriveSyncModal({ isOpen, onClose }: DriveSyncModalProps)
 
             <div className="flex gap-3">
               <button
-                onClick={handleStartDriveTransfer}
+                onClick={() => handleStartDriveTransfer()}
                 className="flex-1 py-3 px-5 rounded-2xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 transition-colors"
               >
                 Réessayer

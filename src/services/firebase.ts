@@ -17,8 +17,9 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firestore with custom databaseId if defined
-export const db: Firestore = firebaseConfigJson.firestoreDatabaseId 
-  ? getFirestore(app, firebaseConfigJson.firestoreDatabaseId)
+const customDbId = (firebaseConfigJson as Record<string, any>).firestoreDatabaseId;
+export const db: Firestore = customDbId 
+  ? getFirestore(app, customDbId)
   : getFirestore(app);
 
 export const DIAVET_OFFICIAL_EMAIL = 'contact@diavet.dz';

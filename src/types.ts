@@ -19,6 +19,8 @@ export type AppScreen =
 export interface Badge {
   id: string;
   title: string;
+  titleAr?: string;
+  titleEn?: string;
   description: string;
   icon: string;
   category: 'questionnaire' | 'referral' | 'milestones' | 'community';
@@ -33,6 +35,8 @@ export interface Badge {
 export interface HealthMilestone {
   id: string;
   title: string;
+  titleAr?: string;
+  titleEn?: string;
   description: string;
   category: 'vaccine' | 'checkup' | 'nutrition' | 'care';
   isCompleted: boolean;
@@ -72,8 +76,11 @@ export interface PetProfileItem {
   birdHabitat?: string;
   rodentSpecies?: string;
   equineUsage?: string;
+  equineActivity?: string;
+  hayAvailable?: string;
   dietType?: string;
   notes?: string;
+  [key: string]: any;
 }
 
 export interface UserProfile {
@@ -99,6 +106,7 @@ export interface UserProfile {
   isOwner?: boolean;
   isVipEarlyAccess?: boolean;
   vipCode?: string;
+  pin?: string;
   badgeTitle?: string;
   welcomeBannerUrl?: string;
   points?: number;

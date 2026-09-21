@@ -196,17 +196,18 @@ export function generateVetAutoInvoiceEmailHtml(
   const currency = options?.currency || 'DZD';
 
   // Extract vet & clinic dynamic details safely from various form submission shapes
-  const vetName = leadData.vetFullName || leadData.name || leadData.rawDetails?.vetFullName || 'Dr. Vétérinaire Agréé';
-  const clinicName = leadData.clinicName || leadData.petNameOrClinic || leadData.rawDetails?.clinicName || 'Cabinet Vétérinaire';
-  const orderNumber = leadData.orderRegistrationNumber || leadData.rawDetails?.orderRegistrationNumber || leadData.rawDetails?.orderNumber || 'ONMV-DZ-VALIDÉ';
-  const phone = leadData.phoneContact || leadData.phone || leadData.rawDetails?.phoneContact || 'Non spécifié';
-  const email = leadData.email || leadData.rawDetails?.email || 'Inscrit via Plateforme';
-  const wilaya = leadData.wilaya || leadData.rawDetails?.wilaya || 'Algérie';
-  const commune = leadData.commune || leadData.rawDetails?.commune || '';
+  const data = (leadData || {}) as Record<string, any>;
+  const vetName = data.vetFullName || data.name || data.rawDetails?.vetFullName || 'Dr. Vétérinaire Agréé';
+  const clinicName = data.clinicName || data.petNameOrClinic || data.rawDetails?.clinicName || 'Cabinet Vétérinaire';
+  const orderNumber = data.orderRegistrationNumber || data.rawDetails?.orderRegistrationNumber || data.rawDetails?.orderNumber || 'ONMV-DZ-VALIDÉ';
+  const phone = data.phoneContact || data.phone || data.rawDetails?.phoneContact || 'Non spécifié';
+  const email = data.email || data.rawDetails?.email || 'Inscrit via Plateforme';
+  const wilaya = data.wilaya || data.rawDetails?.wilaya || 'Algérie';
+  const commune = data.commune || data.rawDetails?.commune || '';
   const location = commune ? `${commune}, ${wilaya}` : wilaya;
 
-  const vipCode = leadData.vipCode || leadData.vipPartnerId || leadData.rawDetails?.vipCode || `VET-PRO-DZ-${Math.floor(1000 + Math.random() * 9000)}`;
-  const submittedAt = leadData.submittedAt || new Date().toLocaleString('fr-DZ', {
+  const vipCode = data.vipCode || data.vipPartnerId || data.rawDetails?.vipCode || `VET-PRO-DZ-${Math.floor(1000 + Math.random() * 9000)}`;
+  const submittedAt = data.submittedAt || new Date().toLocaleString('fr-DZ', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -214,15 +215,15 @@ export function generateVetAutoInvoiceEmailHtml(
     minute: '2-digit'
   });
 
-  const invoiceNumber = `FACT-AUT-${vipCode.replace(/[^A-Z0-9]/gi, '')}-${Date.now().toString().slice(-6)}`;
+  const invoiceNumber = `FACT-AUT-${String(vipCode).replace(/[^A-Z0-9]/gi, '')}-${Date.now().toString().slice(-6)}`;
 
-  const specialtiesList: string[] = Array.isArray(leadData.specialties)
-    ? leadData.specialties
-    : Array.isArray(leadData.animalTypesOrSpecialties)
-      ? leadData.animalTypesOrSpecialties
+  const specialtiesList: string[] = Array.isArray(data.specialties)
+    ? data.specialties
+    : Array.isArray(data.animalTypesOrSpecialties)
+      ? data.animalTypesOrSpecialties
       : ['Pratique Vétérinaire Générale', 'Consultation & Urgences'];
 
-  const patientsVolume = leadData.dailyPatientsCount || leadData.annualBudgetOrPatients || leadData.rawDetails?.dailyPatientsCount || 'Patientèle Active DZ';
+  const patientsVolume = data.dailyPatientsCount || data.annualBudgetOrPatients || data.rawDetails?.dailyPatientsCount || 'Patientèle Active DZ';
 
   return `
 <!DOCTYPE html>

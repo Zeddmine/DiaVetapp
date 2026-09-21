@@ -663,7 +663,7 @@ export default function OnboardingGateway({
         <AnimatePresence>
           {hasRestoredDraft && authMode === 'register' && (
             <motion.div
-              initial={{ opacity: 0, height: 0, mb: 0 }}
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
               animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               className="relative z-10 p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between gap-2 shadow-lg shadow-emerald-950/40"

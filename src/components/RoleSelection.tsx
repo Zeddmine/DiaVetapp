@@ -20,7 +20,7 @@ export default function RoleSelection({
 }: RoleSelectionProps) {
   const t = translations[currentLang];
 
-  const containerVariants = {
+  const containerVariants: any = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -38,7 +38,7 @@ export default function RoleSelection({
     },
   };
 
-  const itemVariants = {
+  const itemVariants: any = {
     hidden: { opacity: 0, y: 16, filter: 'blur(2px)' },
     visible: {
       opacity: 1,

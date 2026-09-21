@@ -109,14 +109,14 @@ export default function VetQuestionnaire({
 
   // Suspense progress timer
   useEffect(() => {
-    if (step === 15) {
+    if (step === 8) {
       soundEngine.playSuccess();
       const interval = setInterval(() => {
         setSuspenseProgress(prev => {
           if (prev >= 100) {
             clearInterval(interval);
             setTimeout(() => {
-              setStep(16);
+              setStep(9);
             }, 600);
             return 100;
           }

@@ -48,14 +48,29 @@ export default function AudioCyberHud({ currentLang = 'fr' }: AudioCyberHudProps
       subtitle: isRtl ? 'ألحان فضائية هادئة' : 'Nappes spatiales & accords doux',
       icon: '🌌'
     },
+    cyber_algeria: {
+      title: isRtl ? 'واحة جزائرية DZ 🇩🇿' : 'Oasis Algérienne DZ 🇩🇿',
+      subtitle: isRtl ? 'ألحان متوسطية دافئة' : 'Nappes chaudes méditerranéennes',
+      icon: '🇩🇿'
+    },
     neo_zen: {
       title: isRtl ? 'زن بيطري مهدئ 🐾' : 'Zen Bio-Vétérinaire 🐾',
-      subtitle: isRtl ? 'نغمات استرخاء طبيعية' : 'Accords pentatoniques & ronronnements',
+      subtitle: isRtl ? 'نغمات استرخاء طبيعية' : 'Accords pentatoniques & carillons',
       icon: '🐾'
     },
+    berceuse: {
+      title: isRtl ? 'تهويدة وخرخرة القطط 🐱' : 'Berceuse Féline & Ronron 🐱',
+      subtitle: isRtl ? 'تردد مهدئ للأعصاب' : 'Basse 35Hz & mélodie nocturne',
+      icon: '🐱'
+    },
+    alpha_432: {
+      title: isRtl ? 'موجات ألفا 432 هرتز 🌊' : 'Ondes Alpha 432 Hz 🌊',
+      subtitle: isRtl ? 'تردد التوازن والراحة' : 'Fréquence de relaxation animale',
+      icon: '🌊'
+    },
     future_pulse: {
-      title: isRtl ? 'نبض المستقبل ⚡' : 'Neo-DZ Pulse ⚡',
-      subtitle: isRtl ? 'إيقاع إلكتروني مستقبلي' : 'Arpèges synthwave haute énergie',
+      title: isRtl ? 'حيوية وتعافي ⚡' : 'Vitalité & Convalescence ⚡',
+      subtitle: isRtl ? 'إيقاع إلكتروني مستقبلي' : 'Harmoniques de récupération',
       icon: '⚡'
     }
   };

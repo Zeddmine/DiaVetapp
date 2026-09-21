@@ -4,7 +4,59 @@
 // futuristic UI sound effects, and generative ambient welcome music.
 // ============================================================================
 
-export type BgmMode = 'cyber_algiers' | 'neo_zen' | 'future_pulse';
+export type BgmMode = 'cyber_algiers' | 'cyber_algeria' | 'neo_zen' | 'berceuse' | 'alpha_432' | 'future_pulse';
+
+export interface MusicTrack {
+  id: BgmMode;
+  title: string;
+  subtitle: string;
+  icon: string;
+  badge: string;
+  color: string;
+}
+
+export const MUSIC_TRACKS: MusicTrack[] = [
+  {
+    id: 'neo_zen',
+    title: 'Zen Clinique & Carillons',
+    subtitle: 'Accords maj9 apaisants & carillons relaxants pour salles d\'attente',
+    icon: '🧘',
+    badge: 'Relaxation',
+    color: 'from-cyan-500 to-teal-500'
+  },
+  {
+    id: 'berceuse',
+    title: 'Berceuse Féline & Ronron',
+    subtitle: 'Basse fréquence douce (vibration 35Hz) & mélodie pentatonique de nuit',
+    icon: '🐱',
+    badge: 'Apaisement',
+    color: 'from-amber-400 to-rose-400'
+  },
+  {
+    id: 'alpha_432',
+    title: 'Ondes Alpha 432 Hz',
+    subtitle: 'Fréquence harmonique universelle pour réduire l\'anxiété des animaux',
+    icon: '🌊',
+    badge: 'Thérapeutique',
+    color: 'from-blue-500 to-indigo-600'
+  },
+  {
+    id: 'cyber_algeria',
+    title: 'Oasis Algérienne DZ',
+    subtitle: 'Nappes chaudes méditerranéennes & luth synthétique ambiant',
+    icon: '🇩🇿',
+    badge: 'Ambiance DZ',
+    color: 'from-emerald-500 to-teal-600'
+  },
+  {
+    id: 'future_pulse',
+    title: 'Vitalité & Convalescence',
+    subtitle: 'Harmoniques douces avec tempo apaisé pour la récupération',
+    icon: '✨',
+    badge: 'Énergie douce',
+    color: 'from-purple-500 to-cyan-500'
+  }
+];
 
 class SoundEngine {
   private ctx: AudioContext | null = null;
@@ -23,7 +75,7 @@ class SoundEngine {
       const savedMuted = localStorage.getItem('diavet_music_muted');
       this.isMuted = savedMuted === null ? true : savedMuted === 'true';
       const savedMode = localStorage.getItem('diavet_bgm_mode') as BgmMode;
-      if (savedMode && ['cyber_algiers', 'neo_zen', 'future_pulse'].includes(savedMode)) {
+      if (savedMode && ['cyber_algiers', 'neo_zen', 'berceuse', 'alpha_432', 'future_pulse'].includes(savedMode)) {
         this.currentBgmMode = savedMode;
       }
     } catch {
@@ -77,6 +129,14 @@ class SoundEngine {
     return this.currentBgmMode;
   }
 
+  public getAvailableTracks(): MusicTrack[] {
+    return MUSIC_TRACKS;
+  }
+
+  public getCurrentTrack(): MusicTrack {
+    return MUSIC_TRACKS.find(t => t.id === this.currentBgmMode) || MUSIC_TRACKS[0];
+  }
+
   public setBgmMode(mode: BgmMode) {
     this.currentBgmMode = mode;
     try {
@@ -88,12 +148,29 @@ class SoundEngine {
     }
   }
 
+  public setTrack(trackId: BgmMode) {
+    this.setBgmMode(trackId);
+  }
+
+  public nextTrack(): MusicTrack {
+    const idx = MUSIC_TRACKS.findIndex(t => t.id === this.currentBgmMode);
+    const nextIdx = (idx + 1) % MUSIC_TRACKS.length;
+    const nextT = MUSIC_TRACKS[nextIdx];
+    this.setBgmMode(nextT.id);
+    return nextT;
+  }
+
+  public prevTrack(): MusicTrack {
+    const idx = MUSIC_TRACKS.findIndex(t => t.id === this.currentBgmMode);
+    const prevIdx = (idx - 1 + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;
+    const prevT = MUSIC_TRACKS[prevIdx];
+    this.setBgmMode(prevT.id);
+    return prevT;
+  }
+
   public cycleBgmMode(): BgmMode {
-    const modes: BgmMode[] = ['cyber_algiers', 'neo_zen', 'future_pulse'];
-    const nextIdx = (modes.indexOf(this.currentBgmMode) + 1) % modes.length;
-    const nextMode = modes[nextIdx];
-    this.setBgmMode(nextMode);
-    return nextMode;
+    const nextT = this.nextTrack();
+    return nextT.id;
   }
 
   // Toggle Background Music Mute
@@ -129,6 +206,10 @@ class SoundEngine {
 
     if (this.currentBgmMode === 'neo_zen') {
       this.startZenAmbient();
+    } else if (this.currentBgmMode === 'berceuse') {
+      this.startBerceuseAmbient();
+    } else if (this.currentBgmMode === 'alpha_432') {
+      this.startAlpha432Ambient();
     } else if (this.currentBgmMode === 'future_pulse') {
       this.startFuturePulse();
     } else {
@@ -351,6 +432,158 @@ class SoundEngine {
     };
 
     this.bgmNotesInterval = setInterval(playPulseStep, 250);
+  }
+
+  // 4. MODE: BERCEUSE FELINE (Calm purring vibration + gentle lullaby chords)
+  private startBerceuseAmbient() {
+    if (!this.ctx || !this.bgmGain) return;
+    const lullabyChords = [
+      [138.59, 207.65, 277.18, 329.63, 415.30], // Db maj9
+      [164.81, 246.94, 329.63, 392.00, 493.88], // E min9
+      [185.00, 277.18, 369.99, 440.00, 554.37], // F# min9
+      [146.83, 220.00, 293.66, 369.99, 440.00], // D maj9
+    ];
+    let chordIdx = 0;
+
+    const playLullaby = () => {
+      if (!this.ctx || !this.bgmGain || !this.isBgmPlaying) return;
+      const now = this.ctx.currentTime;
+      const chord = lullabyChords[chordIdx % lullabyChords.length];
+      chordIdx++;
+
+      // Gentle purr sub-oscillator (28Hz with 6Hz tremolo)
+      try {
+        const purrOsc = this.ctx.createOscillator();
+        const purrGain = this.ctx.createGain();
+        const tremolo = this.ctx.createOscillator();
+        const tremoloGain = this.ctx.createGain();
+
+        purrOsc.type = 'sine';
+        purrOsc.frequency.setValueAtTime(32, now);
+
+        tremolo.type = 'sine';
+        tremolo.frequency.setValueAtTime(6.5, now); // Cat purr rhythmic cadence
+
+        tremoloGain.gain.setValueAtTime(10, now);
+        tremolo.connect(purrOsc.frequency);
+
+        purrGain.gain.setValueAtTime(0.0001, now);
+        purrGain.gain.linearRampToValueAtTime(0.02, now + 1.5);
+        purrGain.gain.exponentialRampToValueAtTime(0.0001, now + 5.5);
+
+        purrOsc.connect(purrGain);
+        purrGain.connect(this.bgmGain);
+
+        purrOsc.start(now);
+        tremolo.start(now);
+        purrOsc.stop(now + 5.8);
+        tremolo.stop(now + 5.8);
+      } catch {}
+
+      // Chord voices
+      chord.forEach((freq, i) => {
+        if (!this.ctx || !this.bgmGain) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(450, now);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(0.028 / (i + 1), now + 2.0);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 5.8);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.bgmGain);
+
+        osc.start(now);
+        osc.stop(now + 6.0);
+      });
+    };
+
+    // Soft gentle bell notes
+    const softNotes = [554.37, 659.25, 739.99, 830.61, 987.77];
+    let noteIdx = 0;
+    const playLullabyBell = () => {
+      if (!this.ctx || !this.bgmGain || !this.isBgmPlaying) return;
+      const now = this.ctx.currentTime;
+      const f = softNotes[noteIdx % softNotes.length];
+      noteIdx++;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.012, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+
+      osc.connect(gain);
+      gain.connect(this.bgmGain);
+      osc.start(now);
+      osc.stop(now + 2.3);
+    };
+
+    playLullaby();
+    playLullabyBell();
+    this.bgmInterval = setInterval(playLullaby, 5800);
+    this.bgmNotesInterval = setInterval(playLullabyBell, 2200);
+  }
+
+  // 5. MODE: ALPHA 432 HZ (Clinical soothing harmonic frequencies)
+  private startAlpha432Ambient() {
+    if (!this.ctx || !this.bgmGain) return;
+    const alphaChords = [
+      [216.00, 270.00, 324.00, 432.00], // 432Hz root harmonics
+      [228.00, 288.00, 345.60, 432.00],
+      [192.00, 240.00, 320.00, 432.00],
+      [216.00, 288.00, 360.00, 432.00],
+    ];
+    let chordIdx = 0;
+
+    const playAlphaDrone = () => {
+      if (!this.ctx || !this.bgmGain || !this.isBgmPlaying) return;
+      const now = this.ctx.currentTime;
+      const chord = alphaChords[chordIdx % alphaChords.length];
+      chordIdx++;
+
+      chord.forEach((freq, i) => {
+        if (!this.ctx || !this.bgmGain) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const pan = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+
+        osc.type = 'sine';
+        // Add tiny detune for 8-10Hz alpha binaural wave effect
+        const detune = (i % 2 === 0 ? -4 : 4);
+        osc.frequency.setValueAtTime(freq + detune, now);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(0.024 / (i + 1), now + 3.0);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 7.5);
+
+        if (pan) {
+          pan.pan.setValueAtTime(i % 2 === 0 ? -0.4 : 0.4, now);
+          osc.connect(pan);
+          pan.connect(gain);
+        } else {
+          osc.connect(gain);
+        }
+        gain.connect(this.bgmGain);
+
+        osc.start(now);
+        osc.stop(now + 7.8);
+      });
+    };
+
+    playAlphaDrone();
+    this.bgmInterval = setInterval(playAlphaDrone, 7200);
   }
 
   public stopWelcomeMusic() {

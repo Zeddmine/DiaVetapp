@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Language, OwnerAnswers, UserProfile } from '../types';
+import { Language, OwnerAnswers, UserProfile, PetProfileItem } from '../types';
 import { translations } from '../data/translations';
 import { PET_TYPE_OPTIONS, ALGERIAN_WILAYAS, ANIMAL_SHOWCASE_PHOTOS, NUTRITION_PHOTOS } from '../data/mockData';
 import { recordOwnerSubmission, generateVipCode } from '../services/adminDb';
@@ -306,14 +306,14 @@ export default function OwnerQuestionnaire({
 
   // Suspense progress timer
   useEffect(() => {
-    if (step === 15) {
+    if (step === 11) {
       soundEngine.playSuccess();
       const interval = setInterval(() => {
         setSuspenseProgress(prev => {
           if (prev >= 100) {
             clearInterval(interval);
             setTimeout(() => {
-              setStep(16);
+              setStep(12);
               setShowMagicEnvelope(true);
             }, 600);
             return 100;
@@ -346,19 +346,16 @@ export default function OwnerQuestionnaire({
         const types = answers.animalTypes || [];
         const petsList = answers.pets || [];
         if (types.length > 1) {
-          for (let i = 0; i < types.length; i++) {
-            const p = petsList[i];
-            const opt = animalChoices.find(c => c.id === types[i]);
-            const label = opt?.title || `Animal #${i + 1}`;
-            if (!p?.name?.trim()) {
-              setActivePetIndex(i);
-              triggerShake(
-                isRtl 
-                  ? `يرجى كتابة اسم الرفيق (${label}) في الاستمارة رقم ${i + 1}.`
-                  : `Veuillez renseigner le prénom de votre ${label} (Animal ${i + 1}/${types.length}).`
-              );
-              return false;
-            }
+          const curPet = petsList[activePetIndex];
+          const curOpt = animalChoices.find(c => c.id === types[activePetIndex]);
+          const curLabel = curOpt?.title || `Animal #${activePetIndex + 1}`;
+          if (!curPet?.name?.trim()) {
+            triggerShake(
+              isRtl 
+                ? `يرجى كتابة اسم الرفيق (${curLabel}).`
+                : `Veuillez renseigner le prénom de votre ${curLabel}.`
+            );
+            return false;
           }
         } else {
           const mainName = petsList[0]?.name || answers.petName;
@@ -488,9 +485,19 @@ export default function OwnerQuestionnaire({
   const handleNext = () => {
     if (!validateCurrentStep()) return;
 
+    const types = answers.animalTypes && answers.animalTypes.length > 0 ? answers.animalTypes : ['cat'];
+    // In step 2, if multiple animals are chosen and we have not finished all pet forms yet, go to next pet form
+    if (step === 2 && types.length > 1 && activePetIndex < types.length - 1) {
+      soundEngine.playSuccess();
+      setActivePetIndex(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     soundEngine.playSuccess();
     if (step < totalSteps) {
       setStep(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       // Final submission -> launch encryption suspense
       const vip = generateVipCode('owner', answers.wilaya || '16 - Alger');
@@ -511,8 +518,20 @@ export default function OwnerQuestionnaire({
   const handleBack = () => {
     soundEngine.playPop();
     setValidationError(null);
+    // In step 2, if not on first pet form, go to previous pet form
+    if (step === 2 && activePetIndex > 0) {
+      setActivePetIndex(prev => prev - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (step > 0) {
-      setStep(prev => prev - 1);
+      const prevStep = step - 1;
+      setStep(prevStep);
+      // When going back from step 3 to step 2, show the last pet form
+      if (prevStep === 2 && (answers.animalTypes?.length || 0) > 1) {
+        setActivePetIndex((answers.animalTypes?.length || 1) - 1);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       onGoHome();
     }
@@ -1608,119 +1627,330 @@ export default function OwnerQuestionnaire({
             );
           })()}
 
-          {/* STEP 3: NUTRITION & FEEDING IN ALGERIA (WITH PHOTOS) */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <div>
-                <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest">
-                  {isRtl ? `المرحلة 3 من ${totalSteps} · التغذية والأكل` : `Étape 3 sur ${totalSteps} · Nutrition & Alimentation`}
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
-                  {isRtl ? 'كيف تغذي رفيقك يومياً في الجزائر ؟' : 'Quel est le mode d\'alimentation quotidien ?'}
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-300 mt-1">
-                  {isRtl ? 'تساعدنا معرفة نوعية الأكل في تقديم نصائح غذائية وتوفير الأغذية المناسبة.' : 'Permet d\'adapter les recommandations de diététique vétérinaire et les alertes de santé.'}
-                </p>
-              </div>
+          {/* STEP 3: NUTRITION & FEEDING IN ALGERIA (WITH TAILORED PHOTOS PER SPECIES) */}
+          {step === 3 && (() => {
+            const selectedTypes = answers.animalTypes && answers.animalTypes.length > 0 ? answers.animalTypes : ['cat'];
+            const safeActiveIdx = Math.min(activePetIndex, selectedTypes.length - 1);
+            const currentType = selectedTypes[safeActiveIdx] || 'cat';
+            const currentPetOpt = animalChoices.find(c => c.id === currentType) || animalChoices[0];
+            const currentPet = answers.pets?.[safeActiveIdx] as PetProfileItem | undefined;
+            const currentPetName = currentPet?.name?.trim() || currentPetOpt.title;
 
-              {/* Nutrition Photo Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {[
+            const getNutritionItems = (type: string) => {
+              if (type === 'cat') {
+                return [
                   {
-                    id: 'Croquettes industrielles (Marques importées & locales)',
-                    title: isRtl ? 'أغذية جافة (كروكيت Croquettes)' : 'Croquettes industrielles',
-                    sub: isRtl ? 'ماركات مستوردة أو إنتاج محلي' : 'Marques importées (Royal Canin, Pro Plan...) & locales DZ',
-                    image: NUTRITION_PHOTOS.kibble,
+                    id: 'Croquettes industrielles (Chat)',
+                    title: isRtl ? 'كروكيت قطط (أغذية جافة)' : 'Croquettes félines spécialisées',
+                    sub: isRtl ? 'ماركات مستوردة ومحلية (Royal Canin, Matisse, Nutri-croc...)' : 'Marques importées & locales DZ (Royal Canin, Matisse, Nutri-croc...)',
+                    image: NUTRITION_PHOTOS.cat?.kibble || NUTRITION_PHOTOS.kibble,
                     icon: '🥣'
                   },
                   {
-                    id: 'Ration ménagère cuisinée maison',
-                    title: isRtl ? 'طبخ منزلي (Ration Ménagère)' : 'Ration ménagère maison',
-                    sub: isRtl ? 'لحم، دجاج، أرز وخضار مطبوخة' : 'Viande, poulet, riz & légumes préparés à la maison',
-                    image: NUTRITION_PHOTOS.homemade,
+                    id: 'Pâtée & sachets fraîcheur humides (Chat)',
+                    title: isRtl ? 'معلبات وساشي رطبة للقطط (Pâtée)' : 'Pâtées & sachets fraîcheur',
+                    sub: isRtl ? 'لحم، دجاج، تونة وصلصة مرطبة للكلى' : 'Terrines, gelée & sauce (poisson, volaille, thon)',
+                    image: NUTRITION_PHOTOS.cat?.wet || NUTRITION_PHOTOS.mixed,
+                    icon: '🐟'
+                  },
+                  {
+                    id: 'Ration ménagère cuisinée (Chat)',
+                    title: isRtl ? 'طبخ منزلي متوازن للقطط' : 'Ration ménagère cuisinée',
+                    sub: isRtl ? 'دجاج أو سمك مسلوق بدون شوك وأرز خفيف' : 'Blanc de poulet ou poisson bouilli sans os/arêtes, courgettes',
+                    image: NUTRITION_PHOTOS.cat?.homemade || NUTRITION_PHOTOS.homemade,
                     icon: '🍗'
                   },
                   {
-                    id: 'Alimentation mixte (Croquettes + Pâtée / Restes)',
-                    title: isRtl ? 'تغذية مختلطة (كروكيت + طعام منزلي)' : 'Alimentation mixte',
-                    sub: isRtl ? 'تنويع بين الأكل الجاف والمعلبات' : 'Alternance croquettes, pâtée humide et compléments',
-                    image: NUTRITION_PHOTOS.mixed,
-                    icon: '🥘'
-                  },
-                  {
-                    id: 'Régime vétérinaire médicalisé spécifique',
-                    title: isRtl ? 'حمية طبية بيطرية خاصة' : 'Aliment diététique vétérinaire',
-                    sub: isRtl ? 'أمراض كلى، هضم، حساسية أو مفاصل' : 'Prescription médicale (rénal, gastro-intestinal, hypoallergénique)',
-                    image: NUTRITION_PHOTOS.vetdiet,
+                    id: 'Régime vétérinaire médicalisé (Chat)',
+                    title: isRtl ? 'حمية طبية بيطرية (جهاز بولي، كلى)' : 'Prescription médicale féline',
+                    sub: isRtl ? 'حصى المسالك البولية، كلى، هضم أو كرات الشعر' : 'Urinaire struvite/oxalate, rénal, digestif ou boules de poils',
+                    image: NUTRITION_PHOTOS.cat?.vetdiet || NUTRITION_PHOTOS.vetdiet,
                     icon: '🩺'
                   }
-                ].map(food => {
-                  const isSelected = answers.dietType === food.id;
-                  return (
-                    <div
-                      key={food.id}
-                      onClick={() => {
-                        soundEngine.playPop();
-                        setAnswers({ ...answers, dietType: food.id });
-                      }}
-                      className={`group relative rounded-3xl overflow-hidden border-2 transition-all cursor-pointer p-4 flex items-center gap-4 ${
-                        isSelected 
-                          ? 'border-cyan-400 bg-cyan-950/40 shadow-xl shadow-cyan-500/20 scale-[1.02]' 
-                          : 'border-white/10 bg-slate-900/80 hover:border-cyan-500/40'
-                      }`}
-                    >
-                      <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 relative border border-white/10">
-                        <img 
-                          src={food.image} 
-                          alt={food.title} 
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-lg">{food.icon}</span>
-                          <h4 className="text-sm font-bold text-white truncate">{food.title}</h4>
-                        </div>
-                        <p className="text-[11px] text-slate-300 leading-snug line-clamp-2">{food.sub}</p>
-                      </div>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border ${
-                        isSelected ? 'bg-cyan-400 border-cyan-300 text-slate-950' : 'border-white/20'
-                      }`}>
-                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                ];
+              } else if (type === 'dog') {
+                return [
+                  {
+                    id: 'Croquettes canines équilibrées (Chien)',
+                    title: isRtl ? 'كروكيت مخصص للكلاب' : 'Croquettes canines complètes',
+                    sub: isRtl ? 'حسب الحجم والنشاط (جرو، بالغ، حراسة)' : 'Formules adaptées au gabarit (Junior, Adulte, Chien actif/Garde)',
+                    image: NUTRITION_PHOTOS.dog?.kibble || NUTRITION_PHOTOS.kibble,
+                    icon: '🥣'
+                  },
+                  {
+                    id: 'Pâtée & boîtes de viande (Chien)',
+                    title: isRtl ? 'معلبات ولحوم رطبة للكلاب' : 'Pâtées & boîtes de viande',
+                    sub: isRtl ? 'قطع لحم في المرق أو الجيلي' : 'Bouchées en sauce, terrines riches en protéines animales',
+                    image: NUTRITION_PHOTOS.dog?.wet || NUTRITION_PHOTOS.mixed,
+                    icon: '🥩'
+                  },
+                  {
+                    id: 'Ration ménagère ou BARF (Chien)',
+                    title: isRtl ? 'طبخ منزلي أو نظام BARF للكلاب' : 'Ration ménagère ou BARF',
+                    sub: isRtl ? 'لحم طازج، خضار مطبوخة وأرز' : 'Viande fraîche, abats, riz bien cuit, carottes et légumes',
+                    image: NUTRITION_PHOTOS.dog?.homemade || NUTRITION_PHOTOS.homemade,
+                    icon: '🍖'
+                  },
+                  {
+                    id: 'Régime vétérinaire médicalisé (Chien)',
+                    title: isRtl ? 'حمية طبية بيطرية للكلاب' : 'Aliment thérapeutique canin',
+                    sub: isRtl ? 'مفاصل، حساسية جلدية، هضم أو سمنة' : 'Prescription vétérinaire (Mobility articulations, hypoallergénique, gastro)',
+                    image: NUTRITION_PHOTOS.dog?.vetdiet || NUTRITION_PHOTOS.vetdiet,
+                    icon: '🩺'
+                  }
+                ];
+              } else if (type === 'bird') {
+                return [
+                  {
+                    id: 'Mélange de graines sélectionnées (Oiseau)',
+                    title: isRtl ? 'حبوب وبذور مختارة (مقنين / كناري)' : 'Mélange de graines premium',
+                    sub: isRtl ? 'زوان مقنين، دخن، كتان وبذور الكناري' : 'Alpiste maknin DZ, millet, navette et graines de lin',
+                    image: NUTRITION_PHOTOS.bird?.seeds || NUTRITION_PHOTOS.kibble,
+                    icon: '🌾'
+                  },
+                  {
+                    id: 'Pâtée aux œufs & fruits frais (Oiseau)',
+                    title: isRtl ? 'باتيه بيض وفواكه طازجة' : 'Pâtée fortifiante & fruits frais',
+                    sub: isRtl ? 'تفاح، جزر مبشور وباتيه التغريد والتزاوج' : 'Pâtée aux œufs d\'élevage, pomme, verdure et graines germées',
+                    image: NUTRITION_PHOTOS.bird?.fresh || NUTRITION_PHOTOS.homemade,
+                    icon: '🍏'
+                  },
+                  {
+                    id: 'Compléments minéraux & os de seiche (Oiseau)',
+                    title: isRtl ? 'عظم الحبار وأملاح معدنية وفيتامينات' : 'Os de seiche & minéraux',
+                    sub: isRtl ? 'كالسيوم طبيعي للريش والتغريد والمنقار' : 'Calcium naturel, os de seiche, grit digestif et vitamines mue',
+                    image: NUTRITION_PHOTOS.bird?.minerals || NUTRITION_PHOTOS.vetdiet,
+                    icon: '🦴'
+                  },
+                  {
+                    id: 'Granulés extrudés pour perroquets (Oiseau)',
+                    title: isRtl ? 'حبيبات غذائية كاملة (Extrudés)' : 'Granulés extrudés complets',
+                    sub: isRtl ? 'للببغاوات والطيور الكبيرة دون فرز' : 'Alimentation complète anti-tri pour perroquets et grandes perruches',
+                    image: NUTRITION_PHOTOS.bird?.patee || NUTRITION_PHOTOS.mixed,
+                    icon: '🦜'
+                  }
+                ];
+              } else if (type === 'rabbit') {
+                return [
+                  {
+                    id: 'Foin vert dépoussiéré à volonté (Lapin)',
+                    title: isRtl ? 'تبن أخضر نقي غير مغبر (أساس 80%)' : 'Foin vert dépoussiéré à volonté',
+                    sub: isRtl ? 'أساس صحة الهضم والأسنان للأرانب' : 'Foin de prairie ou Crau, base indispensable à 80% du transit',
+                    image: NUTRITION_PHOTOS.rabbit?.hay || NUTRITION_PHOTOS.kibble,
+                    icon: '🌾'
+                  },
+                  {
+                    id: 'Granulés complets riches en fibres (Lapin)',
+                    title: isRtl ? 'حبيبات كاملة غنية بالألياف' : 'Granulés complets riches en fibres',
+                    sub: isRtl ? 'بدون حبوب دهنية مفرطة، متجانسة' : 'Extrudés homogènes sans sucres ni graines grasses',
+                    image: NUTRITION_PHOTOS.rabbit?.pellets || NUTRITION_PHOTOS.mixed,
+                    icon: '🥣'
+                  },
+                  {
+                    id: 'Verdure fraîche & légumes croquants (Lapin)',
+                    title: isRtl ? 'خضار وأعشاب طازجة يومياً' : 'Verdure fraîche & légumes variés',
+                    sub: isRtl ? 'سلق، كرفس، أوراق الجزر وأعشاب برية' : 'Fanes de carottes, céleri, pissenlit, persil et salades lavées',
+                    image: NUTRITION_PHOTOS.rabbit?.greens || NUTRITION_PHOTOS.homemade,
+                    icon: '🥬'
+                  },
+                  {
+                    id: 'Mélange varié graines & friandises (Lapin)',
+                    title: isRtl ? 'خليط بذور وأعشاب مجففة' : 'Mélange & herbes séchées',
+                    sub: isRtl ? 'أوراق وبذور مناسبة للقوارض' : 'Mélange varié de fleurs séchées, racines et friandises rongeurs',
+                    image: NUTRITION_PHOTOS.rabbit?.mix || NUTRITION_PHOTOS.vetdiet,
+                    icon: '🥕'
+                  }
+                ];
+              } else if (type === 'farm') {
+                return [
+                  {
+                    id: 'Foin de prairie & pâturage naturel (Élevage)',
+                    title: isRtl ? 'كلأ، علف أخضر وتبن مرعى' : 'Foin de prairie & pâturage naturel',
+                    sub: isRtl ? 'أعلاف رعوية ومحصول طبيعي' : 'Fourrage de qualité et pâture saisonnière',
+                    image: NUTRITION_PHOTOS.farm?.hay || NUTRITION_PHOTOS.kibble,
+                    icon: '🌿'
+                  },
+                  {
+                    id: 'Céréales, orge & son de blé (Élevage)',
+                    title: isRtl ? 'شعير مدروش ونخالة قمح' : 'Céréales, orge aplatie & son',
+                    sub: isRtl ? 'تغذية تقليدية للطاقة والنشاط' : 'Énergie concentrée pour chevaux et ruminants',
+                    image: NUTRITION_PHOTOS.farm?.grains || NUTRITION_PHOTOS.homemade,
+                    icon: '🌾'
+                  },
+                  {
+                    id: 'Granulés complets concentrés (Élevage)',
+                    title: isRtl ? 'حبيبات وأعلاف مركبة مركزة' : 'Granulés concentrés élevage',
+                    sub: isRtl ? 'أعلاف متوازنة مدعمة بالبروتين' : 'Aliments complets formulés par nutritionnistes équins/bovins',
+                    image: NUTRITION_PHOTOS.farm?.pellets || NUTRITION_PHOTOS.mixed,
+                    icon: '🥣'
+                  },
+                  {
+                    id: 'Pierres à lécher & minéraux (Élevage)',
+                    title: isRtl ? 'أحجار الملح والمعادن (Bloc à lécher)' : 'Blocs de sel & oligo-éléments',
+                    sub: isRtl ? 'أملاح معدنية وفيتامينات النمو' : 'Minéraux essentiels, sel pur et oligo-éléments',
+                    image: NUTRITION_PHOTOS.farm?.salt || NUTRITION_PHOTOS.vetdiet,
+                    icon: '🧱'
+                  }
+                ];
+              } else {
+                return [
+                  {
+                    id: 'Insectes vivants (Reptile)',
+                    title: isRtl ? 'حشرات حية (صراصير، ديدان)' : 'Insectes vivants nourriciers',
+                    sub: isRtl ? 'صراصير، دودة الطحين ودوبيا' : 'Grillons, vers de farine, blattes dubia saupoudrés',
+                    image: NUTRITION_PHOTOS.reptile?.insects || NUTRITION_PHOTOS.kibble,
+                    icon: '🦗'
+                  },
+                  {
+                    id: 'Végétaux frais & salades (Reptile)',
+                    title: isRtl ? 'نباتات وخضروات طازجة' : 'Végétaux frais & fleurs comestibles',
+                    sub: isRtl ? 'للسلاحف والإغوانا العاشبة' : 'Feuilles riches en calcium, endives, pissenlit et fleurs',
+                    image: NUTRITION_PHOTOS.reptile?.greens || NUTRITION_PHOTOS.homemade,
+                    icon: '🥬'
+                  },
+                  {
+                    id: 'Granulés spécifiques & extrudés (Reptile)',
+                    title: isRtl ? 'حبيبات خاصة بالزواحف والسلاحف' : 'Granulés spécifiques reptiles',
+                    sub: isRtl ? 'تركيبة مخصصة للسلاحف والزواحف' : 'Sticks et granulés équilibrés pour tortues terrestres ou aquatiques',
+                    image: NUTRITION_PHOTOS.reptile?.pellets || NUTRITION_PHOTOS.mixed,
+                    icon: '🥣'
+                  },
+                  {
+                    id: 'Poudres calcium & vitamines D3 (Reptile)',
+                    title: isRtl ? 'بودرة كالسيوم وفيتامين D3' : 'Calcium avec vitamine D3',
+                    sub: isRtl ? 'لمنع لين العظام ونقص الكالسيوم' : 'Suppléments indispensables sous éclairage UVB adapté',
+                    image: NUTRITION_PHOTOS.reptile?.calcium || NUTRITION_PHOTOS.vetdiet,
+                    icon: '🧪'
+                  }
+                ];
+              }
+            };
 
-              {/* Feeding Supply in Algeria */}
-              <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                  {isRtl ? 'كيف تجد وفرة الأكل والأدوية في ولايتك ؟' : 'Disponibilité des aliments & compléments dans votre wilaya'}
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {[
-                    { label: isRtl ? 'متوفر بسهولة في المحلات' : 'Facilement disponible', icon: '✅' },
-                    { label: isRtl ? 'صعوبة أحياناً في الماركات' : 'Ruptures occasionnelles', icon: '⚠️' },
-                    { label: isRtl ? 'صعوبة مستمرة في التموين' : 'Difficile à trouver', icon: '⏳' }
-                  ].map(sup => (
-                    <FuturisticBubble
-                      key={sup.label}
-                      label={sup.label}
-                      icon={sup.icon}
-                      isRtl={isRtl}
-                      selected={answers.feedingSource === sup.label}
-                      onClick={() => {
-                        soundEngine.playPop();
-                        setAnswers({ ...answers, feedingSource: sup.label });
-                      }}
-                    />
-                  ))}
+            const nutritionOptions = getNutritionItems(currentType);
+            const currentDiet = currentPet.dietType || answers.dietType;
+
+            return (
+              <div className="space-y-6">
+                <div>
+                  <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest">
+                    {isRtl ? `المرحلة 3 من ${totalSteps} · التغذية والأكل` : `Étape 3 sur ${totalSteps} · Nutrition & Alimentation`}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">
+                    {isRtl 
+                      ? `كيف تغذي ${currentPetName} (${currentPetOpt.title}) في الجزائر ؟` 
+                      : `Quel est le mode d'alimentation de ${currentPetName} (${currentPetOpt.title}) ?`}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                    {isRtl 
+                      ? 'خيارات طعام مخصصة ومصنفة بيولوجياً حسب نوع حيوانك الأليف لضمان نصائح غذائية بيطرية دقيقة.' 
+                      : 'Choix d\'alimentation adaptés à son espèce pour personnaliser le suivi nutritionnel et les alertes diététiques.'}
+                  </p>
+                </div>
+
+                {/* Multi-Animal Switcher Tabs in Step 3 if more than 1 animal was selected */}
+                {selectedTypes.length > 1 && (
+                  <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-900 border border-white/10 overflow-x-auto">
+                    <span className="text-xs font-bold text-slate-400 px-2 shrink-0">
+                      {isRtl ? 'تخصيص غذاء :' : 'Alimentation de :'}
+                    </span>
+                    {selectedTypes.map((type, idx) => {
+                      const p = answers.pets?.[idx] as PetProfileItem | undefined;
+                      const opt = animalChoices.find(c => c.id === type) || animalChoices[0];
+                      const isCur = safeActiveIdx === idx;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            soundEngine.playPop();
+                            setActivePetIndex(idx);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 border ${
+                            isCur
+                              ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md shadow-cyan-500/30'
+                              : 'bg-slate-950/60 text-slate-300 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          <span>{opt.icon}</span>
+                          <span>{p?.name?.trim() || opt.title}</span>
+                          {p?.dietType && <span className="text-[10px] text-emerald-400">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Tailored Nutrition Photo Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {nutritionOptions.map(food => {
+                    const isSelected = currentDiet === food.id;
+                    return (
+                      <div
+                        key={food.id}
+                        onClick={() => {
+                          soundEngine.playPop();
+                          updateCurrentPetField('dietType', food.id);
+                          setAnswers(prev => ({ ...prev, dietType: food.id }));
+                        }}
+                        className={`group relative rounded-3xl overflow-hidden border-2 transition-all cursor-pointer p-4 flex items-center gap-4 ${
+                          isSelected 
+                            ? 'border-cyan-400 bg-cyan-950/40 shadow-xl shadow-cyan-500/20 scale-[1.02]' 
+                            : 'border-white/10 bg-slate-900/80 hover:border-cyan-500/40'
+                        }`}
+                      >
+                        <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 relative border border-white/10 bg-slate-800">
+                          <img 
+                            src={food.image} 
+                            alt={food.title} 
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-lg">{food.icon}</span>
+                            <h4 className="text-sm font-bold text-white truncate">{food.title}</h4>
+                          </div>
+                          <p className="text-[11px] text-slate-300 leading-snug line-clamp-2">{food.sub}</p>
+                        </div>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border ${
+                          isSelected ? 'bg-cyan-400 border-cyan-300 text-slate-950' : 'border-white/20'
+                        }`}>
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Feeding Supply in Algeria */}
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                    {isRtl ? 'كيف تجد وفرة الأكل والأدوية في ولايتك ؟' : 'Disponibilité des aliments & compléments dans votre wilaya'}
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {[
+                      { label: isRtl ? 'متوفر بسهولة في المحلات' : 'Facilement disponible', icon: '✅' },
+                      { label: isRtl ? 'صعوبة أحياناً في الماركات' : 'Ruptures occasionnelles', icon: '⚠️' },
+                      { label: isRtl ? 'صعوبة مستمرة في التموين' : 'Difficile à trouver', icon: '⏳' }
+                    ].map(sup => (
+                      <FuturisticBubble
+                        key={sup.label}
+                        label={sup.label}
+                        icon={sup.icon}
+                        isRtl={isRtl}
+                        selected={answers.feedingSource === sup.label}
+                        onClick={() => {
+                          soundEngine.playPop();
+                          setAnswers({ ...answers, feedingSource: sup.label });
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* STEP 4: VACCINATIONS & PREVENTATIVE CARE */}
           {step === 4 && (
@@ -2194,6 +2424,53 @@ export default function OwnerQuestionnaire({
                   <span>{isRtl ? "تمت مزامنة اسمك ورقم هاتفك وولايتك تلقائياً من تسجيلك دون الحاجة لإعادة كتابتها" : "Nom, téléphone et Wilaya déjà synchronisés depuis votre inscription DiaVet"}</span>
                 </div>
               )}
+
+              {/* Registered Pets Summary Badge */}
+              <div className="p-4 rounded-3xl bg-slate-900/90 border border-white/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                    <span>
+                      {isRtl 
+                        ? `الرفقاء المسجلون في ملفك (${answers.pets?.length || 1}) :` 
+                        : `Compagnons enregistrés dans votre dossier (${answers.pets?.length || 1}) :`}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundEngine.playPop();
+                      setStep(2);
+                    }}
+                    className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
+                  >
+                    {isRtl ? 'تعديل الاستمارات ✎' : 'Modifier les fiches ✎'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(answers.pets && answers.pets.length > 0 ? answers.pets : [{ id: 'pet-fallback', name: answers.petName || 'Compagnon', animalType: answers.animalTypes?.[0] || 'cat' }]).map((p, idx) => {
+                    const opt = animalChoices.find(c => c.id === p.animalType) || animalChoices[0];
+                    return (
+                      <div key={idx} className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-950 border border-white/10">
+                        <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xl shrink-0">
+                          {opt.icon}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white truncate">
+                            {p.name?.trim() || `Animal #${idx + 1}`}
+                          </p>
+                          <p className="text-[10px] text-slate-400 truncate">
+                            {opt.title} {p.breed ? `· ${p.breed}` : ''} {p.age ? `· ${p.age}` : ''}
+                          </p>
+                        </div>
+                        <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shrink-0">
+                          {isRtl ? 'جاهز' : 'Prêt'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

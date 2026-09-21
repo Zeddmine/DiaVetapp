@@ -131,8 +131,8 @@ export default function Footer({ currentLang, userRole = 'owner', onNavigate, on
                     key={faq.id}
                     className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
                       isOpen
-                        ? 'bg-slate-950 border-cyan-500/30 shadow-lg shadow-cyan-500/5'
-                        : 'bg-slate-950/50 border-white/5 hover:border-white/15'
+                        ? 'bg-slate-950 dark:bg-slate-950 light:bg-white border-cyan-500/30 light:border-cyan-600/30 shadow-lg shadow-cyan-500/5'
+                        : 'bg-slate-950/50 dark:bg-slate-950/50 light:bg-white/80 border-white/5 light:border-slate-200 hover:border-white/15 light:hover:border-slate-300'
                     }`}
                   >
                     <button
@@ -141,7 +141,7 @@ export default function Footer({ currentLang, userRole = 'owner', onNavigate, on
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${isOpen ? 'bg-cyan-400 animate-pulse' : 'bg-slate-600'}`} />
-                        <span className="text-xs sm:text-sm font-black text-white dark:text-white light:text-slate-100">
+                        <span className="text-xs sm:text-sm font-black text-white dark:text-white light:text-slate-900">
                           {question}
                         </span>
                         {badge && (
@@ -151,14 +151,14 @@ export default function Footer({ currentLang, userRole = 'owner', onNavigate, on
                         )}
                       </div>
 
-                      <div className="p-1.5 rounded-lg bg-white/5 text-slate-400 shrink-0">
+                      <div className="p-1.5 rounded-lg bg-white/5 light:bg-slate-100 text-slate-400 light:text-slate-600 shrink-0">
                         {isOpen ? <ChevronUp className="w-4 h-4 text-cyan-400" /> : <ChevronDown className="w-4 h-4" />}
                       </div>
                     </button>
 
                     {isOpen && (
-                      <div className="px-5 pb-5 pt-1 text-xs text-slate-300 sm:text-sm leading-relaxed border-t border-white/5 animate-in fade-in duration-200">
-                        <p className="max-w-4xl text-slate-300 dark:text-slate-300 light:text-slate-300 font-normal">
+                      <div className="px-5 pb-5 pt-1 text-xs text-slate-300 sm:text-sm leading-relaxed border-t border-white/5 light:border-slate-100 animate-in fade-in duration-200">
+                        <p className="max-w-4xl text-slate-300 dark:text-slate-300 light:text-slate-700 font-normal">
                           {answer}
                         </p>
                       </div>

@@ -105,6 +105,9 @@ interface DiaVetTvSectionProps {
   currentLang?: Language;
   onOpenQuestionnaire?: (role: 'owner' | 'vet') => void;
   onOpenDirectory?: () => void;
+  onGoHome?: () => void;
+  onSelectOwnerPortal?: () => void;
+  onSelectVetPortal?: () => void;
 }
 
 export default function DiaVetTvSection({
