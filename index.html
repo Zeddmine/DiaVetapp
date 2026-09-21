@@ -38,17 +38,6 @@
         <style>@keyframes loadingBar{0%{transform:translate(-100%)}to{transform:translate(100%)}}</style>
       </div>
     </div>
-    <script type="module">
-      if (window.location.hostname.includes('github.io') || (!window.location.port && !window.location.hostname.includes('run.app'))) {
-        var link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.crossOrigin = 'anonymous';
-        link.href = './assets/index-DdY9p_4z.css';
-        document.head.appendChild(link);
-        import('./assets/index-DRLdIW1g.js');
-      } else {
-        import('/src/main.tsx');
-      }
-    </script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
