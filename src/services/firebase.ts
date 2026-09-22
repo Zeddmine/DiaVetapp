@@ -1,6 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getFirestore, 
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  memoryLocalCache,
+  setLogLevel,
   Firestore, 
   collection, 
   addDoc, 
@@ -17,6 +22,13 @@ import {
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 
+// Keep Firestore logs clean during offline or flaky connection states
+try {
+  setLogLevel('error');
+} catch {
+  // Ignore in environments where setLogLevel is restricted
+}
+
 const rawKeyParts = ['AIzaSyC9JHJOlL63H', 'CpZiCyCx4wx4W7lrVcOwI'];
 
 export const firebaseConfig = {
@@ -31,11 +43,36 @@ export const firebaseConfig = {
 // Initialize Firebase App instance safely (singleton pattern)
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firestore with custom databaseId if defined
+// Initialize Firestore with auto-detect long polling & persistent local cache
 const customDbId = (firebaseConfigJson as Record<string, any>).firestoreDatabaseId;
-export const db: Firestore = customDbId 
-  ? getFirestore(app, customDbId)
-  : getFirestore(app);
+
+export const db: Firestore = (() => {
+  try {
+    return initializeFirestore(
+      app,
+      {
+        experimentalAutoDetectLongPolling: true,
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      },
+      customDbId
+    );
+  } catch {
+    try {
+      return initializeFirestore(
+        app,
+        {
+          experimentalAutoDetectLongPolling: true,
+          localCache: memoryLocalCache()
+        },
+        customDbId
+      );
+    } catch {
+      return customDbId ? getFirestore(app, customDbId) : getFirestore(app);
+    }
+  }
+})();
 
 export const DIAVET_OFFICIAL_EMAIL = 'contact@diavet.dz';
 export const OWNER_TARGET_EMAIL = 'mine.mine0100@gmail.com';
