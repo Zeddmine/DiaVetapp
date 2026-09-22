@@ -10,8 +10,10 @@
     <meta name="theme-color" content="#020617" />
     <title>DiaVet Algérie — La Plateforme Unifiée de Santé Animale 🇩🇿</title>
     <meta name="description" content="Plateforme numérique vétérinaire pour l'Algérie connectant propriétaires et vétérinaires avec carnet de santé, système de badges et jalons santé, articles et conseils cliniques, et annuaire d'urgences." />
-    <link rel="icon" type="image/x-icon" href="./favicon.ico" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
     <script>
       // Load saved theme immediately to prevent white/dark flash
       try {
@@ -27,27 +29,27 @@
         }
       } catch (e) {}
 
-      // Automatically clean any legacy or intercepting service workers and caches
+      // Unregister any old stale PWA service workers and clear workbox cache to prevent visitor load hangs
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for (var i = 0; i < registrations.length; i++) {
-            registrations[i].unregister();
+            if (registrations[i].active && registrations[i].active.scriptURL && !registrations[i].active.scriptURL.includes('firebase-messaging-sw')) {
+              registrations[i].unregister();
+            }
           }
         });
       }
       if (typeof window !== 'undefined' && 'caches' in window) {
         caches.keys().then(function(names) {
           for (var i = 0; i < names.length; i++) {
-            if (names[i].indexOf('workbox') !== -1 || window.location.port === '3000' || window.location.hostname.includes('dev')) {
-              caches.delete(names[i]);
-            }
+            caches.delete(names[i]);
           }
         });
       }
     </script>
-    <script type="module" crossorigin src="./assets/index-CVoDKH4u.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DdWwo3FL.css">
-  <link rel="manifest" href="./manifest.webmanifest"></head>
+    <script type="module" crossorigin src="/assets/index-CUeE-mRO.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dlu0gwel.css">
+  </head>
   <body class="antialiased selection:bg-cyan-500 selection:text-white overscroll-none overflow-x-hidden">
     <div id="root">
       <!-- Instant 0ms Dark Splash Screen prevents white flash on mobile home screen launcher -->

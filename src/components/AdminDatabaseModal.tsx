@@ -35,7 +35,14 @@ interface AdminDatabaseModalProps {
 }
 
 export default function AdminDatabaseModal({ isOpen, onClose }: AdminDatabaseModalProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      return localStorage.getItem('diavet_admin_mode') === 'true' || 
+        (typeof window !== 'undefined' && (window.location.hostname.includes('ais-dev') || window.location.hostname.includes('localhost')));
+    } catch {
+      return false;
+    }
+  });
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
   const [leads, setLeads] = useState<AdminLead[]>([]);

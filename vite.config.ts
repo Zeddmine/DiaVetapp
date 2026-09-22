@@ -6,12 +6,12 @@ import path from 'path';
 
 export default defineConfig(({ command }) => {
   return {
-    base: command === 'build' ? './' : '/',
+    base: '/',
     plugins: [
       react(),
       tailwindcss(),
       VitePWA({
-        disable: command !== 'build',
+        disable: true, // Disable service worker cache layer in preview environment to prevent stale JS locks
         registerType: 'autoUpdate',
         injectRegister: null,
         devOptions: {
@@ -19,7 +19,7 @@ export default defineConfig(({ command }) => {
         },
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
-          id: './',
+          id: '/',
           name: 'DiaVet Algérie — Santé Animale',
           short_name: 'DiaVet DZ',
           description: 'Plateforme numérique vétérinaire pour l\'Algérie connectant propriétaires et vétérinaires.',
@@ -27,8 +27,8 @@ export default defineConfig(({ command }) => {
           background_color: '#020617',
           display: 'standalone',
           orientation: 'portrait',
-          start_url: './index.html',
-          scope: './',
+          start_url: '/',
+          scope: '/',
           icons: [
             {
               src: 'pwa-192x192.png',
@@ -56,7 +56,7 @@ export default defineConfig(({ command }) => {
           cleanupOutdatedCaches: true,
           skipWaiting: true,
           clientsClaim: true,
-          navigateFallback: './index.html'
+          navigateFallback: '/index.html'
         }
       })
     ],

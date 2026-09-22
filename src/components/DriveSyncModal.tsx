@@ -158,13 +158,13 @@ export default function DriveSyncModal({ isOpen, onClose }: DriveSyncModalProps)
                 </span>
               </div>
               <p>
-                Tous les dossiers des visiteurs (propriétaires et vétérinaires) et le registre Excel sont synchronisés directement dans le dossier :
+                Tous les dossiers des membres inscrits (propriétaires et vétérinaires) et le registre Excel sont synchronisés directement dans le dossier :
               </p>
               <div className="p-2.5 rounded-xl bg-slate-950/80 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-center text-xs">
                 📁 {DIAVET_DRIVE_FOLDER_NAME}
               </div>
               <p className="text-[11px] text-slate-400">
-                🔒 L'accès au tableau de bord des données est strictement réservé aux administrateurs. Les visiteurs ne voient jamais la base de données.
+                🔒 L'accès au tableau de bord des données est strictement réservé aux administrateurs.
               </p>
             </div>
 

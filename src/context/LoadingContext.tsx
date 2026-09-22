@@ -20,9 +20,20 @@ export const LoadingProvider: React.FC<{ children: ReactNode }> = ({ children })
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
-    }, 450);
+    }, 300);
     return () => clearTimeout(timer);
   }, []);
+
+  // Safety auto-dismiss guard to prevent stuck loading overlays
+  useEffect(() => {
+    if (isLoading) {
+      const safetyTimer = setTimeout(() => {
+        setIsLoading(false);
+        setLoadingMessage(null);
+      }, 2500);
+      return () => clearTimeout(safetyTimer);
+    }
+  }, [isLoading]);
 
   const startLoading = useCallback((message?: string) => {
     setLoadingMessage(message || null);

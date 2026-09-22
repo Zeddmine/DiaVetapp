@@ -20,6 +20,11 @@ import {
   LivePortalNotification
 } from '../services/firebase';
 import { 
+  subscribeToClinicalDossiers, 
+  subscribeToUserProfile, 
+  ClinicalDossier 
+} from '../services/realtimeSync';
+import { 
   requestPushNotificationPermission, 
   sendClinicAppointmentPushAlert,
   sendPersonalizedHealthReminder 
@@ -52,15 +57,18 @@ export default function OwnerPortalPreview({
   // Real-time Firestore State via onSnapshot
   const [liveHealthUpdates, setLiveHealthUpdates] = useState<LiveHealthUpdate[]>([]);
   const [liveNotifications, setLiveNotifications] = useState<LivePortalNotification[]>([]);
+  const [liveDossiers, setLiveDossiers] = useState<ClinicalDossier[]>([]);
+  const [liveProfileData, setLiveProfileData] = useState<any>(null);
   const [showAddHealthModal, setShowAddHealthModal] = useState(false);
   const [newHealthTitle, setNewHealthTitle] = useState('');
   const [newHealthDetails, setNewHealthDetails] = useState('');
   const [newHealthType, setNewHealthType] = useState<'observation' | 'weight' | 'vaccine' | 'treatment'>('observation');
   const [isSavingHealth, setIsSavingHealth] = useState(false);
 
-  const petName = userAnswers?.petName || 'Milo';
-  const wilaya = userAnswers?.wilaya || '16 - Alger';
-  const ownerName = userAnswers?.ownerName || 'Propriétaire DiaVet';
+  const petName = liveProfileData?.petName || userAnswers?.petName || 'Milo';
+  const wilaya = liveProfileData?.wilaya || userAnswers?.wilaya || '16 - Alger';
+  const ownerName = liveProfileData?.ownerName || userAnswers?.ownerName || 'Propriétaire DiaVet';
+  const ownerEmail = liveProfileData?.email || (userAnswers as any)?.email || '';
 
   // Firebase Realtime onSnapshot Listener
   useEffect(() => {
@@ -74,11 +82,23 @@ export default function OwnerPortalPreview({
       setLiveNotifications(notifs);
     });
 
+    // 3. Subscribe to Clinical Dossiers in Real-Time
+    const unsubDossiers = subscribeToClinicalDossiers(wilaya, (dossiers) => {
+      setLiveDossiers(dossiers);
+    });
+
+    // 4. Subscribe to User Profile in Real-Time
+    const unsubProfile = subscribeToUserProfile(ownerEmail, (profile) => {
+      if (profile) setLiveProfileData(profile);
+    });
+
     return () => {
       unsubHealth();
       unsubNotifs();
+      unsubDossiers();
+      unsubProfile();
     };
-  }, [wilaya]);
+  }, [wilaya, ownerEmail]);
 
   const handleCreateHealthEntry = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -22,6 +22,11 @@ import {
   LivePortalNotification
 } from '../services/firebase';
 import { 
+  subscribeToClinicalDossiers, 
+  syncClinicalDossierToFirestore, 
+  ClinicalDossier 
+} from '../services/realtimeSync';
+import { 
   sendClinicAppointmentPushAlert, 
   sendPersonalizedHealthReminder 
 } from '../services/firebaseMessaging';
@@ -68,6 +73,7 @@ export default function VetPortalPreview({
   ]);
 
   const [liveNotifications, setLiveNotifications] = useState<LivePortalNotification[]>([]);
+  const [liveDossiers, setLiveDossiers] = useState<ClinicalDossier[]>([]);
 
   const wilaya = userAnswers?.wilaya || '16 - Alger';
   const clinicName = userAnswers?.clinicName || (isRtl ? 'عيادة الأبيار البيطرية' : isEn ? 'El Biar Veterinary Clinic' : 'Cabinet El Biar');
@@ -91,9 +97,15 @@ export default function VetPortalPreview({
       setLiveNotifications(notifs);
     });
 
+    // 3. Subscribe to Clinical Dossiers in Real-Time
+    const unsubDossiers = subscribeToClinicalDossiers(wilaya, (dossiers) => {
+      setLiveDossiers(dossiers);
+    });
+
     return () => {
       unsubQueue();
       unsubNotifs();
+      unsubDossiers();
     };
   }, [wilaya]);
 
@@ -180,6 +192,25 @@ export default function VetPortalPreview({
       wilaya,
       date: new Date().toISOString().slice(0, 10),
       status: 'normal'
+    });
+
+    // Sync to clinical dossier in Firestore (broadcasts in real-time to connected devices via onSnapshot)
+    await syncClinicalDossierToFirestore({
+      petName: targetPet,
+      petType: 'Animal de Compagnie',
+      ownerName: 'Propriétaire DiaVet',
+      wilaya,
+      veterinarianName: `Dr. Amine Benali`,
+      clinicName,
+      lastConsultationDate: new Date().toISOString().slice(0, 10),
+      prescriptions: [
+        {
+          id: 'rx_' + Date.now(),
+          drugName: rxDrug,
+          dosage: rxDose,
+          prescribedAt: new Date().toLocaleString('fr-DZ')
+        }
+      ]
     });
 
     // Dispatch push reminder for the medication follow-up

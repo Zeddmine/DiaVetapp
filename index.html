@@ -29,7 +29,7 @@
         }
       } catch (e) {}
 
-      // Ensure FCM and PWA service workers can register cleanly
+      // Unregister any old stale PWA service workers and clear workbox cache to prevent visitor load hangs
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for (var i = 0; i < registrations.length; i++) {
@@ -42,9 +42,7 @@
       if (typeof window !== 'undefined' && 'caches' in window) {
         caches.keys().then(function(names) {
           for (var i = 0; i < names.length; i++) {
-            if (names[i].indexOf('workbox') !== -1 || window.location.port === '3000' || window.location.hostname.includes('dev')) {
-              caches.delete(names[i]);
-            }
+            caches.delete(names[i]);
           }
         });
       }

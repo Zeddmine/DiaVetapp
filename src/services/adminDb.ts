@@ -713,6 +713,50 @@ function getInitialSeedLeads(): AdminLead[] {
       ],
       submittedAt: '18/09/2026 16:45',
       rawDetails: {}
+    },
+    {
+      id: 'lead-seed-3',
+      role: 'owner',
+      name: 'Karim Mansouri',
+      phone: '0550 12 34 56',
+      wilaya: '16 - Alger',
+      commune: 'Dely Ibrahim',
+      petNameOrClinic: 'Mina (Sacré de Birmanie)',
+      animalTypesOrSpecialties: ['cat'],
+      vipCode: 'VIP-DZ-16-9921',
+      annualBudgetOrPatients: '20 000 à 40 000 DZD',
+      challenges: [
+        'Suivi du carnet de vaccination lors des déplacements inter-wilayas',
+        'Orientation vers des spécialistes félins qualifiés'
+      ],
+      expectedFeatures: [
+        'Carnet de santé virtuel synchronisé',
+        'Fiche nutritionnelle et alertes vétérinaires'
+      ],
+      submittedAt: '19/09/2026 10:15',
+      rawDetails: {}
+    },
+    {
+      id: 'lead-seed-4',
+      role: 'vet',
+      name: 'Dr. Fatma Zohra Khelifi',
+      phone: '0770 98 76 54',
+      wilaya: '25 - Constantine',
+      commune: 'Nouvelle Ville Ali Mendjeli',
+      petNameOrClinic: 'Cabinet Vétérinaire Cirta',
+      animalTypesOrSpecialties: ['Petits animaux', 'Imagerie & Echographie'],
+      vipCode: 'VET-PRO-DZ-25-8831',
+      annualBudgetOrPatients: '20 à 40 patients/jour',
+      challenges: [
+        'Sensibilisation insuffisante des propriétaires aux soins préventifs',
+        'Besoin de digitalisation du registre d\'hospitalisation'
+      ],
+      expectedFeatures: [
+        'Téléconsultation assistée',
+        'Annuaire de garde national certifié'
+      ],
+      submittedAt: '20/09/2026 11:50',
+      rawDetails: {}
     }
   ];
 }

@@ -6,7 +6,7 @@ import { ShieldCheck, Sparkles } from 'lucide-react';
 import DiaVetLogo from './DiaVetLogo';
 
 export const GlobalLoadingOverlay: React.FC = () => {
-  const { isLoading, isInitialLoading, loadingMessage } = useLoading();
+  const { isLoading, isInitialLoading, loadingMessage, stopLoading } = useLoading();
   const { currentLang } = useLanguage();
 
   const active = isInitialLoading || isLoading;
@@ -27,7 +27,8 @@ export const GlobalLoadingOverlay: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.25, ease: 'easeOut' } }}
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-xl select-none px-4"
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-xl select-none px-4 cursor-pointer"
+          onClick={() => stopLoading()}
         >
           {/* Ambient background blur circles */}
           <div className="absolute w-72 h-72 rounded-full bg-cyan-500/15 blur-3xl animate-pulse pointer-events-none" />

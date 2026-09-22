@@ -25,7 +25,8 @@ export async function generateWelcomeBanner(
       const roleTitle = role === 'vet' ? `Docteur Vétérinaire (${petOrClinicName || 'Clinique'})` : `Propriétaire d'Animal (${petOrClinicName || 'Compagnon'})`;
       const prompt = `A breathtaking, professional, high-tech 'Welcome to DiaVet Algeria' banner for ${userName}, ${roleTitle}. Dark luxury cyber aesthetic, glowing neon cyan and emerald lighting, golden Algerian crescent and star accent, futuristic veterinary medical emblem, 16:9 aspect ratio, ultra high resolution.`;
 
-      const response = await ai.models.generateContent({
+      // 2.5s Timeout wrapper to prevent blocking UI loading
+      const apiCallPromise = ai.models.generateContent({
         model: 'gemini-3.1-flash-lite-image',
         contents: {
           parts: [{ text: prompt }]
@@ -36,6 +37,12 @@ export async function generateWelcomeBanner(
           }
         }
       });
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('AI Banner request timeout')), 2500)
+      );
+
+      const response = await Promise.race([apiCallPromise, timeoutPromise]);
 
       if (response.candidates && response.candidates[0]?.content?.parts) {
         for (const part of response.candidates[0].content.parts) {
