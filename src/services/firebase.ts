@@ -43,7 +43,7 @@ export const firebaseConfig = {
 // Initialize Firebase App instance safely (singleton pattern)
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firestore with auto-detect long polling & persistent local cache
+// Initialize Firestore with forced long polling & persistent local cache to bypass WebChannel restrictions
 const customDbId = (firebaseConfigJson as Record<string, any>).firestoreDatabaseId;
 
 export const db: Firestore = (() => {
@@ -51,7 +51,7 @@ export const db: Firestore = (() => {
     return initializeFirestore(
       app,
       {
-        experimentalAutoDetectLongPolling: true,
+        experimentalForceLongPolling: true,
         localCache: persistentLocalCache({
           tabManager: persistentMultipleTabManager()
         })
@@ -63,7 +63,7 @@ export const db: Firestore = (() => {
       return initializeFirestore(
         app,
         {
-          experimentalAutoDetectLongPolling: true,
+          experimentalForceLongPolling: true,
           localCache: memoryLocalCache()
         },
         customDbId

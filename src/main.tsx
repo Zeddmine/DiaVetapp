@@ -5,6 +5,35 @@ import { LanguageProvider } from './context/LanguageContext.tsx';
 import { LoadingProvider } from './context/LoadingContext.tsx';
 import './index.css';
 
+// Filter harmless offline/reconnect notices from @firebase/firestore so they don't trigger false error alarms
+if (typeof window !== 'undefined') {
+  const origWarn = console.warn;
+  const origError = console.error;
+  
+  const isFirestoreOfflineNotice = (...args: any[]) => {
+    const str = args.map(a => (typeof a === 'string' ? a : (a?.message || ''))).join(' ');
+    return str.includes('@firebase/firestore') || 
+           str.includes('Could not reach Cloud Firestore backend') ||
+           str.includes('operate in offline mode until it is able to successfully connect');
+  };
+
+  console.warn = (...args: any[]) => {
+    if (isFirestoreOfflineNotice(...args)) {
+      console.debug('[DiaVet Offline Cache Mode]', ...args);
+      return;
+    }
+    origWarn.apply(console, args);
+  };
+
+  console.error = (...args: any[]) => {
+    if (isFirestoreOfflineNotice(...args)) {
+      console.debug('[DiaVet Offline Cache Mode]', ...args);
+      return;
+    }
+    origError.apply(console, args);
+  };
+}
+
 // Register PWA service worker safely in production
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   import('virtual:pwa-register')
