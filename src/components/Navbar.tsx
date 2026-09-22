@@ -29,17 +29,12 @@ interface NavbarProps {
   unlockedBadgesCount?: number;
   hasCompletedQuestionnaire?: boolean;
   userRole?: 'owner' | 'vet';
-  isOwner?: boolean;
   userName?: string;
   userPoints?: number;
-  onOpenExcel?: () => void;
   onLockedFeatureClick?: (featureName: string) => void;
   onResetRegistration?: () => void;
   onOpenProfile?: () => void;
   onOpenContact?: () => void;
-  onOpenDriveSync?: () => void;
-  onOpenAdminDb?: () => void;
-  cloudLeadsCount?: number;
   isRegistered?: boolean;
   onOpenAuth?: () => void;
   onLogout?: () => void;
@@ -56,16 +51,11 @@ export default function Navbar({
   unlockedBadgesCount,
   hasCompletedQuestionnaire = false,
   userRole = 'owner',
-  isOwner = false,
   userName,
   userPoints,
-  onOpenExcel,
   onLockedFeatureClick,
   onOpenProfile,
   onOpenContact,
-  onOpenDriveSync,
-  onOpenAdminDb,
-  cloudLeadsCount,
   isRegistered = false,
   onOpenAuth,
   onLogout,
@@ -115,7 +105,7 @@ export default function Navbar({
             }} 
             className="flex items-center gap-2.5 sm:gap-3 group text-left cursor-pointer transition-transform active:scale-95 shrink-0"
           >
-            <DiaVetLogo size="md" variant={isOwner ? 'developer' : 'visitor'} />
+            <DiaVetLogo size="md" variant="visitor" />
             <div className="flex flex-col">
               <span className={`text-xl sm:text-2xl font-black tracking-tight transition-colors flex items-center gap-1.5 ${
                 currentTheme === 'light'
@@ -123,10 +113,8 @@ export default function Navbar({
                   : 'text-white group-hover:text-emerald-300'
               }`}>
                 DiaVet <span className={`text-xs px-2 py-0.5 rounded-full font-bold border ${
-                  isOwner
-                    ? (currentTheme === 'light' ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-blue-500/20 text-blue-300 border-blue-500/30')
-                    : (currentTheme === 'light' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30')
-                }`}>{isOwner ? 'DEV PRO 🇩🇿' : 'DZ 🇩🇿'}</span>
+                  currentTheme === 'light' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                }`}>DZ 🇩🇿</span>
               </span>
               <span className={`text-[10px] sm:text-xs hidden xs:inline -mt-0.5 font-medium ${
                 currentTheme === 'light' ? 'text-slate-600' : 'text-slate-400'
@@ -333,60 +321,6 @@ export default function Navbar({
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>contact@diavet.com</span>
-              </button>
-            )}
-
-            {/* Official Admin Cloud Database / Inscriptions Directes — STRICTLY FOR OWNER */}
-            {isOwner && onOpenAdminDb && (
-              <button
-                type="button"
-                onClick={() => {
-                  soundEngine.playCyberClick();
-                  onOpenAdminDb();
-                }}
-                title="Base de Données Cloud & Inscriptions en Direct (Firebase)"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-2 border-cyan-400/50 shadow-lg shadow-cyan-500/20 transition-all hover:scale-105 shrink-0 cursor-pointer"
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span className="hidden sm:inline">Inscriptions Cloud</span>
-                {typeof cloudLeadsCount === 'number' && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-cyan-400 text-slate-950 text-[10px] font-black">
-                    {cloudLeadsCount}
-                  </span>
-                )}
-              </button>
-            )}
-
-            {/* Official Admin Excel Leads & Drive Cloud Sync — STRICTLY FOR OWNER (mine.mine0100@gmail.com) */}
-            {isOwner && onOpenExcel && (
-              <button
-                onClick={() => {
-                  soundEngine.playCyberClick();
-                  onOpenExcel();
-                }}
-                title="Tableau de bord Admin - Registre Excel (.xls)"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border-2 border-emerald-400/50 shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 shrink-0 cursor-pointer"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                <span className="hidden sm:inline">Excel Admin</span>
-              </button>
-            )}
-
-
-            {isOwner && onOpenDriveSync && (
-              <button
-                onClick={() => {
-                  soundEngine.playCyberClick();
-                  onOpenDriveSync();
-                }}
-                title="Dossier Google Drive Dédié : DiaVet donner et informations"
-                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border-2 border-blue-400/50 transition-all hover:scale-105 shrink-0 cursor-pointer"
-              >
-                <Cloud className="w-3.5 h-3.5 text-blue-400" />
-                <span className="hidden lg:inline">Drive DiaVet</span>
               </button>
             )}
 

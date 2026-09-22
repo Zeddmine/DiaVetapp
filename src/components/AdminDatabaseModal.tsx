@@ -38,7 +38,12 @@ export default function AdminDatabaseModal({ isOpen, onClose }: AdminDatabaseMod
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     try {
       return localStorage.getItem('diavet_admin_mode') === 'true' || 
-        (typeof window !== 'undefined' && (window.location.hostname.includes('ais-dev') || window.location.hostname.includes('localhost')));
+        (typeof window !== 'undefined' && (
+          window.location.hostname.includes('ais-dev') || 
+          window.location.hostname.includes('ais-pre') || 
+          window.location.hostname.includes('run.app') || 
+          window.location.hostname.includes('localhost')
+        ));
     } catch {
       return false;
     }

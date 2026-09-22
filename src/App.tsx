@@ -35,6 +35,7 @@ import GentleMusicPlayer from './components/GentleMusicPlayer';
 import ProfileEditModal from './components/ProfileEditModal';
 import WelcomeAiBannerSection from './components/WelcomeAiBannerSection';
 import PushNotificationCenter from './components/PushNotificationCenter';
+import DevConsoleApp from './devconsole/DevConsoleApp';
 import PushNotificationPromptBanner from './components/PushNotificationPromptBanner';
 import { listenToForegroundPushNotifications, dispatchNativePushNotification, requestPushNotificationPermission, registerServiceWorkerAuto } from './services/firebaseMessaging';
 import { recordRegistrationLead, fetchAndMergeCloudLeads, mergeCloudSubmissionsIntoLeads, getAdminLeads } from './services/adminDb';
@@ -96,23 +97,14 @@ export default function App() {
   const [activeScreen, setActiveScreen] = useState<AppScreen>('home');
   const [isIphoneView, setIsIphoneView] = useState<boolean>(false);
 
-  // Check if current session is developer / admin environment
+  // Check if current session is developer / admin environment (supports ais-dev, ais-pre, run.app, localhost)
   const isDevHost = typeof window !== 'undefined' && (
     window.location.hostname.includes('ais-dev') || 
+    window.location.hostname.includes('ais-pre') || 
+    window.location.hostname.includes('run.app') || 
     window.location.hostname.includes('localhost') ||
     window.location.hostname.includes('127.0.0.1')
   );
-
-  // Clear stale developer flags on visitor domains
-  useEffect(() => {
-    if (!isDevHost && typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem('diavet_admin_mode');
-      } catch {
-        // ignore storage errors
-      }
-    }
-  }, [isDevHost]);
 
   // User profile state - loaded from localStorage in real-time
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
@@ -129,7 +121,8 @@ export default function App() {
   const isOwner = Boolean(
     isDevHost ||
     userProfile.isOwner ||
-    userProfile.email?.toLowerCase().trim() === 'mine.mine0100@gmail.com'
+    userProfile.email?.toLowerCase().trim() === 'mine.mine0100@gmail.com' ||
+    (typeof window !== 'undefined' && localStorage.getItem('diavet_admin_mode') === 'true')
   );
 
   // Clean Global Reset for visitors
@@ -141,14 +134,8 @@ export default function App() {
     }
   });
 
-  // Auth / Registration Modal state - opens if user is not registered
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('diavet_registered') !== 'true';
-    } catch {
-      return true;
-    }
-  });
+  // Auth / Registration Modal state - Never blocks the user automatically!
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [showPushNotificationModal, setShowPushNotificationModal] = useState<boolean>(false);
@@ -1181,6 +1168,15 @@ export default function App() {
     );
   };
 
+  // If user opens the standalone DiaVet-DevConsole app view
+  if (typeof window !== 'undefined' && (
+    window.location.search.includes('app=devconsole') || 
+    window.location.search.includes('mode=devconsole') || 
+    window.location.hash.includes('devconsole')
+  )) {
+    return <DevConsoleApp />;
+  }
+
   return (
     <div className={`min-h-screen relative transition-colors duration-300 ${
       currentTheme === 'dark' 
@@ -1230,18 +1226,13 @@ export default function App() {
         unlockedBadgesCount={unlockedCount}
         hasCompletedQuestionnaire={hasCompletedQuestionnaire}
         userRole={userProfile.userRole}
-        isOwner={isOwner}
         userName={userProfile.name}
         userPoints={userProfile.points}
-        onOpenExcel={() => setShowExcelModal(true)}
-        onOpenAdminDb={() => setShowAdminDbModal(true)}
-        cloudLeadsCount={cloudLeadsCount}
         onLockedFeatureClick={(featureName) => {
           setLockedFeatureName(featureName);
           setShowLockedGiftModal(true);
         }}
         onOpenContact={() => setShowContactModal(true)}
-        onOpenDriveSync={() => setShowDriveSyncModal(true)}
         onOpenProfile={() => setShowProfileModal(true)}
         onOpenPushCenter={() => setShowPushNotificationModal(true)}
         onResetRegistration={handleLogout}
@@ -1406,7 +1397,7 @@ export default function App() {
               currentLang={currentLang}
               onSelectLang={handleSelectLang}
               onRegister={handleRegisterSuccess}
-              onClose={isRegistered ? () => setShowAuthModal(false) : undefined}
+              onClose={() => setShowAuthModal(false)}
             />
           </div>
         </div>
