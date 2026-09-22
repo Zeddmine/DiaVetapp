@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && rm -rf docs && cp -rf dist docs",
+    "build": "vite build && rm -rf docs && cp -rf dist docs && cp dist/index.html docs/404.html && cp dist/index.html 404.html && touch docs/.nojekyll && touch .nojekyll",
     "lint": "tsc --noEmit",
     "preview": "vite preview"
   },

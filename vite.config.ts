@@ -6,7 +6,7 @@ import path from 'path';
 
 export default defineConfig(({ command }) => {
   return {
-    base: '/',
+    base: './',
     plugins: [
       react(),
       tailwindcss(),
