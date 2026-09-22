@@ -1,5 +1,11 @@
 import { AdminLead, OwnerAnswers, VetAnswers, UserProfile } from '../types';
-import { syncSubmissionToFirestore, DIAVET_OFFICIAL_EMAIL, OWNER_TARGET_EMAIL } from './firebase';
+import { 
+  syncSubmissionToFirestore, 
+  fetchSubmissionsFromFirestore,
+  FirestoreSubmissionData,
+  DIAVET_OFFICIAL_EMAIL, 
+  OWNER_TARGET_EMAIL 
+} from './firebase';
 import { autoSyncLatestExcelToDrive, autoSyncRegistrationDossierToDrive } from './googleDrive';
 
 const ADMIN_DB_KEY = 'diavet_secure_admin_db';
@@ -9,6 +15,63 @@ export function generateVipCode(role: 'owner' | 'vet', wilaya: string): string {
   const randomNum = Math.floor(1000 + Math.random() * 9000);
   const prefix = role === 'owner' ? 'VIP-DZ' : 'VET-PRO-DZ';
   return `${prefix}-${wilayaCode}-${randomNum}`;
+}
+
+export function convertCloudSubmissionToLead(item: FirestoreSubmissionData): AdminLead {
+  return {
+    id: item.id || `cloud-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    role: item.role || 'owner',
+    name: item.name || 'Membre DiaVet',
+    phone: item.phone || 'Non renseigné',
+    wilaya: item.wilaya || '16 - Alger',
+    commune: item.commune || 'Centre',
+    petNameOrClinic: item.petNameOrClinic || (item.role === 'vet' ? 'Cabinet Vétérinaire' : 'Animal de compagnie'),
+    animalTypesOrSpecialties: item.animalTypesOrSpecialties || (item.role === 'vet' ? ['Praticien Vétérinaire'] : ['Animal']),
+    vipCode: item.vipCode || `VIP-DZ-${Math.floor(1000 + Math.random() * 9000)}`,
+    annualBudgetOrPatients: item.annualBudgetOrPatients || 'Standard',
+    challenges: item.challenges || [],
+    expectedFeatures: item.expectedFeatures || [],
+    submittedAt: item.submittedAt || new Date().toLocaleString('fr-DZ'),
+    rawDetails: item.rawDetails || item
+  };
+}
+
+export function mergeCloudSubmissionsIntoLeads(cloudSubmissions: FirestoreSubmissionData[]): AdminLead[] {
+  const currentLeads = getAdminLeads();
+  const cloudLeads = cloudSubmissions.map(convertCloudSubmissionToLead);
+  
+  // Use a map keyed by id or (name+phone) to deduplicate and preserve order
+  const leadMap = new Map<string, AdminLead>();
+
+  // Add cloud leads first (they are authoritative from Firestore)
+  for (const lead of cloudLeads) {
+    const key = lead.id || `${lead.name}_${lead.phone}`;
+    leadMap.set(key, lead);
+  }
+
+  // Then add local leads if not already present
+  for (const lead of currentLeads) {
+    const key = lead.id || `${lead.name}_${lead.phone}`;
+    if (!leadMap.has(key)) {
+      leadMap.set(key, lead);
+    }
+  }
+
+  const merged = Array.from(leadMap.values());
+  saveAdminLeads(merged);
+  return merged;
+}
+
+export async function fetchAndMergeCloudLeads(): Promise<AdminLead[]> {
+  try {
+    const cloudSubmissions = await fetchSubmissionsFromFirestore();
+    if (cloudSubmissions && cloudSubmissions.length > 0) {
+      return mergeCloudSubmissionsIntoLeads(cloudSubmissions);
+    }
+  } catch (err) {
+    console.warn('[AdminDB] Could not merge cloud leads:', err);
+  }
+  return getAdminLeads();
 }
 
 export function getAdminLeads(): AdminLead[] {
@@ -25,6 +88,7 @@ export function getAdminLeads(): AdminLead[] {
     return getInitialSeedLeads();
   }
 }
+
 
 export function saveAdminLeads(leads: AdminLead[]): void {
   try {

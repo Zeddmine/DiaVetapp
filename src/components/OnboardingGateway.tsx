@@ -1428,20 +1428,38 @@ export default function OnboardingGateway({
           </form>
         )}
 
-        {onClose && (
-          <div className="text-center pt-3 mt-2 border-t border-white/5">
+        {/* GUEST EXPLORATION */}
+        <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-center">
+          {onClose ? (
             <button
               type="button"
               onClick={() => {
                 soundEngine.playCyberClick();
                 onClose();
               }}
-              className="text-xs text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer py-1"
+              className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer py-1"
             >
-              {isRtl ? "← تصفح موقع DiaVet كزائر دون تسجيل" : isEn ? "← Explore DiaVet platform as a guest" : "← Continuer la visite du site sans connexion"}
+              {isRtl ? "← تصفح موقع DiaVet كزائر" : isEn ? "← Explore DiaVet as guest" : "← Continuer la visite en mode invité"}
             </button>
-          </div>
-        )}
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                soundEngine.playCyberClick();
+                onRegister({
+                  name: 'Visiteur DiaVet',
+                  userRole: 'owner',
+                  wilaya: '16 - Alger',
+                  petName: 'Mon Compagnon',
+                  petType: 'Chien'
+                }, 'owner');
+              }}
+              className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer py-1"
+            >
+              {isRtl ? "← تصفح المنصة كزائر" : isEn ? "← Explore platform as guest" : "← Explorer en tant que visiteur"}
+            </button>
+          )}
+        </div>
 
       </div>
     </div>

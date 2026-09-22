@@ -510,6 +510,7 @@ export default function OwnerQuestionnaire({
       };
 
       recordOwnerSubmission(completeAnswers, vip);
+      onFinish(completeAnswers);
       soundEngine.playLevelUp();
       setStep(11);
     }

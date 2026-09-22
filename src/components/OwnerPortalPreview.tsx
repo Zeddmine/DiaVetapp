@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Language, OwnerAnswers, Badge } from '../types';
 import { translations, getTranslations } from '../data/translations';
@@ -6,11 +6,24 @@ import { tabContentVariants } from '../utils/transitions';
 import { 
   Heart, Calendar, AlertTriangle, ShieldCheck, 
   ChevronLeft, Plus, Phone, Clock, FileText, CheckCircle, Sparkles, MapPin, Award, ArrowRight,
-  Activity, Crown, Scan, Scale
+  Activity, Crown, Scan, Scale, Bell, Radio, Check, Stethoscope, BellRing
 } from 'lucide-react';
 import FuturisticBioScanner from './FuturisticBioScanner';
 import HolographicVipCard from './HolographicVipCard';
 import PetWeightTracker from './PetWeightTracker';
+import { 
+  subscribeToHealthUpdates, 
+  subscribeToPortalNotifications, 
+  addLiveHealthEntry, 
+  addLiveAppointment,
+  LiveHealthUpdate,
+  LivePortalNotification
+} from '../services/firebase';
+import { 
+  requestPushNotificationPermission, 
+  sendClinicAppointmentPushAlert,
+  sendPersonalizedHealthReminder 
+} from '../services/firebaseMessaging';
 
 interface OwnerPortalPreviewProps {
   currentLang: Language;
@@ -33,15 +46,98 @@ export default function OwnerPortalPreview({
   const [bookedSuccess, setBookedSuccess] = useState(false);
   const [selectedDate, setSelectedDate] = useState('2026-09-25');
   const [selectedTime, setSelectedTime] = useState('10:30');
+  const [appointmentReason, setAppointmentReason] = useState('Consultation de contrôle / Vaccins');
+  const [isSubmittingAppt, setIsSubmittingAppt] = useState(false);
+
+  // Real-time Firestore State via onSnapshot
+  const [liveHealthUpdates, setLiveHealthUpdates] = useState<LiveHealthUpdate[]>([]);
+  const [liveNotifications, setLiveNotifications] = useState<LivePortalNotification[]>([]);
+  const [showAddHealthModal, setShowAddHealthModal] = useState(false);
+  const [newHealthTitle, setNewHealthTitle] = useState('');
+  const [newHealthDetails, setNewHealthDetails] = useState('');
+  const [newHealthType, setNewHealthType] = useState<'observation' | 'weight' | 'vaccine' | 'treatment'>('observation');
+  const [isSavingHealth, setIsSavingHealth] = useState(false);
 
   const petName = userAnswers?.petName || 'Milo';
   const wilaya = userAnswers?.wilaya || '16 - Alger';
+  const ownerName = userAnswers?.ownerName || 'Propriétaire DiaVet';
+
+  // Firebase Realtime onSnapshot Listener
+  useEffect(() => {
+    // 1. Subscribe to Live Health Updates
+    const unsubHealth = subscribeToHealthUpdates(wilaya, (records) => {
+      setLiveHealthUpdates(records);
+    });
+
+    // 2. Subscribe to Live Portal Notifications
+    const unsubNotifs = subscribeToPortalNotifications('owner', wilaya, (notifs) => {
+      setLiveNotifications(notifs);
+    });
+
+    return () => {
+      unsubHealth();
+      unsubNotifs();
+    };
+  }, [wilaya]);
+
+  const handleCreateHealthEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newHealthTitle.trim()) return;
+    setIsSavingHealth(true);
+
+    await addLiveHealthEntry({
+      petName,
+      type: newHealthType,
+      title: newHealthTitle,
+      details: newHealthDetails,
+      veterinarianName: 'Dr. Amine Benali (El Biar)',
+      wilaya,
+      date: new Date().toISOString().slice(0, 10),
+      status: 'normal'
+    });
+
+    setNewHealthTitle('');
+    setNewHealthDetails('');
+    setIsSavingHealth(false);
+    setShowAddHealthModal(false);
+  };
+
+  const handleBookAppointment = async () => {
+    setIsSubmittingAppt(true);
+    await addLiveAppointment({
+      petName,
+      ownerName,
+      phone: '+213 550 12 34 56',
+      date: selectedDate,
+      timeSlot: selectedTime,
+      reason: appointmentReason,
+      wilaya
+    });
+
+    // Send instant FCM push alert to device
+    try {
+      await sendClinicAppointmentPushAlert({
+        petName,
+        ownerName,
+        clinicName: 'Clinique Vétérinaire El Biar (Dr. Amine Benali)',
+        date: selectedDate,
+        timeSlot: selectedTime,
+        wilaya,
+        status: 'confirmé'
+      });
+    } catch (e) {
+      console.warn('Push alert error:', e);
+    }
+
+    setIsSubmittingAppt(false);
+    setBookedSuccess(true);
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 animate-in fade-in duration-300">
       
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
           <button
             onClick={onGoHome}
@@ -52,8 +148,8 @@ export default function OwnerPortalPreview({
           </button>
           <h1 className="text-2xl sm:text-4xl font-black text-white dark:text-white light:text-slate-900 flex items-center gap-3">
             <span>Espace Propriétaire</span>
-            <span className="text-xs px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold uppercase">
-              Démo Interactive
+            <span className="text-xs px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold uppercase flex items-center gap-1.5">
+              <Radio className="w-3 h-3 text-emerald-400 animate-pulse" /> Live Cloud Active
             </span>
           </h1>
         </div>
@@ -63,6 +159,32 @@ export default function OwnerPortalPreview({
           <span>{wilaya}</span>
         </div>
       </div>
+
+      {/* Live Realtime Notifications Bar */}
+      {liveNotifications.length > 0 && (
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-cyan-950/60 to-slate-900 border border-cyan-500/30 shadow-lg flex items-start justify-between gap-3 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shrink-0 mt-0.5">
+              <Bell className="w-4 h-4 animate-bounce" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-cyan-300 uppercase tracking-wider">
+                  Notification Vétérinaire Directe
+                </span>
+                <span className="text-[10px] px-2 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
+                  {liveNotifications[0].timestamp}
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-white mt-0.5">{liveNotifications[0].title}</h4>
+              <p className="text-xs text-slate-300">{liveNotifications[0].message}</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-1 rounded-lg bg-slate-950 text-slate-400 shrink-0">
+            {liveNotifications.length} alerte(s)
+          </span>
+        </div>
+      )}
 
       {/* Pet Header Card */}
       <div className="rounded-3xl p-6 border border-cyan-500/30 bg-gradient-to-r from-slate-950 via-slate-900 to-cyan-950/30 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row items-center gap-6 mb-8 relative overflow-hidden">
@@ -81,7 +203,7 @@ export default function OwnerPortalPreview({
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
             <h2 className="text-2xl sm:text-3xl font-black text-white">{petName}</h2>
             <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-              ● En parfaite santé
+              ● En parfaite santé (Sync Cloud Live)
             </span>
           </div>
           <p className="text-slate-400 text-xs sm:text-sm">
@@ -98,10 +220,10 @@ export default function OwnerPortalPreview({
               Poids : <span className="font-bold text-cyan-300">{currentPetWeight} kg</span>
             </button>
             <div className="px-3 py-1 rounded-xl bg-white/[0.04] border border-white/5">
-              Âge : <span className="font-bold text-cyan-300">3 ans</span>
+              Âge : <span className="font-bold text-white">3 ans 4 mois</span>
             </div>
             <div className="px-3 py-1 rounded-xl bg-white/[0.04] border border-white/5">
-              Stérilisé : <span className="font-bold text-cyan-300">Oui</span>
+              Sexe : <span className="font-bold text-white">Mâle (Stérilisé)</span>
             </div>
           </div>
         </div>
@@ -109,7 +231,7 @@ export default function OwnerPortalPreview({
         {/* SOS Button */}
         <button
           onClick={() => setActiveTab('sos')}
-          className="px-5 py-3 rounded-2xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer"
+          className="px-5 py-3 rounded-2xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0"
         >
           <AlertTriangle className="w-4 h-4 text-rose-400" />
           <span>Urgence Véto</span>
@@ -274,14 +396,116 @@ export default function OwnerPortalPreview({
                 </div>
               </div>
 
-              {/* Clinical history card */}
+              {/* Clinical history card & Real-Time Firebase Stream */}
               <div className="rounded-3xl p-6 border border-white/10 bg-slate-950/70 backdrop-blur-xl">
-                <h3 className="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-cyan-400" />
-                  <span>Dernières consultations enregistrées</span>
-                </h3>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-cyan-400" />
+                    <span>Consultations & Données de Santé en Direct</span>
+                    <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono border border-cyan-500/30">
+                      <Radio className="w-2.5 h-2.5 text-emerald-400 animate-pulse" /> onSnapshot Live
+                    </span>
+                  </h3>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAddHealthModal(true)}
+                    className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Ajouter Note / Soin</span>
+                  </button>
+                </div>
+
+                {/* Add Health Observation Modal */}
+                {showAddHealthModal && (
+                  <form onSubmit={handleCreateHealthEntry} className="mb-6 p-4 rounded-2xl bg-slate-900 border border-cyan-500/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wider">
+                        Nouvelle Entrée Clinique Instantanée
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddHealthModal(false)}
+                        className="text-xs text-slate-400 hover:text-white"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 mb-1">Type d'acte :</label>
+                        <select
+                          value={newHealthType}
+                          onChange={(e) => setNewHealthType(e.target.value as any)}
+                          className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200"
+                        >
+                          <option value="observation">Observation Générale</option>
+                          <option value="vaccine">Vaccination / Rappel</option>
+                          <option value="weight">Contrôle de Poids</option>
+                          <option value="treatment">Traitement / Soin</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 mb-1">Titre de l'acte :</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: Examen oreilles & otite, Poids 28.6kg..."
+                          value={newHealthTitle}
+                          onChange={(e) => setNewHealthTitle(e.target.value)}
+                          className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Détails & Recommandations Vétérinaires :</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Précisions de l'examen, posologie ou observations..."
+                        value={newHealthDetails}
+                        onChange={(e) => setNewHealthDetails(e.target.value)}
+                        className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSavingHealth}
+                      className="w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {isSavingHealth ? 'Enregistrement Cloud...' : 'Enregistrer Instantanément (Live Firebase)'}
+                    </button>
+                  </form>
+                )}
 
                 <div className="space-y-3 text-xs sm:text-sm">
+                  {/* Live entries from Firestore */}
+                  {liveHealthUpdates.map(rec => (
+                    <div key={rec.id} className="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 animate-fade-in">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-bold text-cyan-300 flex items-center gap-1.5">
+                          <Stethoscope className="w-3.5 h-3.5 text-cyan-400" />
+                          {rec.title}
+                        </span>
+                        <span className="text-slate-400 text-xs font-mono">{rec.date}</span>
+                      </div>
+                      <p className="text-slate-200 text-xs leading-relaxed">
+                        {rec.details}
+                      </p>
+                      <div className="mt-2 text-cyan-400 text-xs font-semibold flex items-center justify-between">
+                        <span>{rec.veterinarianName} &bull; {rec.wilaya}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+                          ✓ Sync Cloud
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Standard initial base record */}
                   <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-bold text-white">Bilan Annuel & Dentisterie</span>
@@ -360,11 +584,15 @@ export default function OwnerPortalPreview({
                         <label className="block text-xs font-bold text-slate-300 mb-1.5">
                           Motif de la visite :
                         </label>
-                        <select className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 text-xs text-white">
-                          <option>Consultation de contrôle / Vaccins</option>
-                          <option>Dermatologie / Démangeaisons</option>
-                          <option>Certificat de bonne santé voyage</option>
-                          <option>Conseils en nutrition & pesée</option>
+                        <select 
+                          value={appointmentReason}
+                          onChange={(e) => setAppointmentReason(e.target.value)}
+                          className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 text-xs text-white"
+                        >
+                          <option value="Consultation de contrôle / Vaccins">Consultation de contrôle / Vaccins</option>
+                          <option value="Dermatologie / Démangeaisons">Dermatologie / Démangeaisons</option>
+                          <option value="Certificat de bonne santé voyage">Certificat de bonne santé voyage</option>
+                          <option value="Conseils en nutrition & pesée">Conseils en nutrition & pesée</option>
                         </select>
                       </div>
                     </div>
@@ -397,10 +625,12 @@ export default function OwnerPortalPreview({
                     </div>
 
                     <button
-                      onClick={() => setBookedSuccess(true)}
-                      className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
+                      type="button"
+                      disabled={isSubmittingAppt}
+                      onClick={handleBookAppointment}
+                      className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
                     >
-                      Confirmer le rendez-vous →
+                      {isSubmittingAppt ? 'Transmission Cloud en cours...' : 'Confirmer et Synchroniser le rendez-vous →'}
                     </button>
                   </div>
                 )}

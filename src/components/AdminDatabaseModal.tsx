@@ -1,13 +1,33 @@
 import { useState, useEffect } from 'react';
 import { AdminLead } from '../types';
-import { getAdminLeads, saveAdminLeads, exportLeadsToCsv, exportLeadsToJson, generateMailtoForLead } from '../services/adminDb';
-import { fetchSubmissionsFromFirestore, DIAVET_OFFICIAL_EMAIL, OWNER_TARGET_EMAIL } from '../services/firebase';
+import { 
+  getAdminLeads, 
+  saveAdminLeads, 
+  exportLeadsToCsv, 
+  exportLeadsToJson, 
+  generateMailtoForLead,
+  fetchAndMergeCloudLeads,
+  mergeCloudSubmissionsIntoLeads
+} from '../services/adminDb';
+import { 
+  fetchSubmissionsFromFirestore, 
+  subscribeToSubmissionsFromFirestore,
+  DIAVET_OFFICIAL_EMAIL, 
+  OWNER_TARGET_EMAIL 
+} from '../services/firebase';
 import { 
   ShieldCheck, Lock, Unlock, Download, Search, Filter, 
   Trash2, RefreshCw, X, Eye, Phone, MapPin, Calendar, 
   Award, Stethoscope, Heart, User, CheckCircle2, Mail, 
-  Database, Cloud, Send, ExternalLink
+  Database, Cloud, Send, ExternalLink, Wifi, Bell, BellRing
 } from 'lucide-react';
+import { 
+  requestPushNotificationPermission, 
+  dispatchNativePushNotification, 
+  getNotificationPermissionStatus 
+} from '../services/firebaseMessaging';
+import { soundEngine } from '../utils/soundEngine';
+import DiaVetLogo from './DiaVetLogo';
 
 interface AdminDatabaseModalProps {
   isOpen: boolean;
@@ -24,11 +44,39 @@ export default function AdminDatabaseModal({ isOpen, onClose }: AdminDatabaseMod
   const [selectedLead, setSelectedLead] = useState<AdminLead | null>(null);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [cloudSyncedCount, setCloudSyncedCount] = useState<number | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string>(new Date().toLocaleTimeString('fr-DZ'));
 
   useEffect(() => {
-    if (isOpen) {
-      setLeads(getAdminLeads());
-    }
+    if (!isOpen) return;
+
+    // 1. Initial load from local cache
+    const initial = getAdminLeads();
+    setLeads(initial);
+
+    // 2. Fetch from Cloud Firestore immediately
+    setIsSyncingCloud(true);
+    fetchAndMergeCloudLeads()
+      .then(merged => {
+        setLeads(merged);
+        setCloudSyncedCount(merged.length);
+        setLastSyncTime(new Date().toLocaleTimeString('fr-DZ'));
+      })
+      .catch(err => console.warn('Cloud fetch notice:', err))
+      .finally(() => setIsSyncingCloud(false));
+
+    // 3. Realtime onSnapshot subscription from Cloud Firestore
+    const unsubscribe = subscribeToSubmissionsFromFirestore((submissions) => {
+      if (submissions && submissions.length > 0) {
+        const merged = mergeCloudSubmissionsIntoLeads(submissions);
+        setLeads(merged);
+        setCloudSyncedCount(submissions.length);
+        setLastSyncTime(new Date().toLocaleTimeString('fr-DZ'));
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -39,7 +87,7 @@ export default function AdminDatabaseModal({ isOpen, onClose }: AdminDatabaseMod
     if (pinInput.trim().toUpperCase() === 'DIAVET2026' || pinInput.trim() === '2026') {
       setIsAuthenticated(true);
       setPinError(false);
-      setLeads(getAdminLeads());
+      handleRefresh();
     } else {
       setPinError(true);
     }
@@ -47,21 +95,24 @@ export default function AdminDatabaseModal({ isOpen, onClose }: AdminDatabaseMod
 
   const handleQuickUnlock = () => {
     setIsAuthenticated(true);
-    setLeads(getAdminLeads());
+    handleRefresh();
   };
 
   const handleRefresh = async () => {
     setIsSyncingCloud(true);
     try {
-      const cloudData = await fetchSubmissionsFromFirestore();
-      if (cloudData && cloudData.length > 0) {
-        setCloudSyncedCount(cloudData.length);
-      }
+      const merged = await fetchAndMergeCloudLeads();
+      setLeads(merged);
+      setCloudSyncedCount(merged.length);
+      setLastSyncTime(new Date().toLocaleTimeString('fr-DZ'));
+    } catch (e) {
+      console.warn('Manual cloud sync caught:', e);
       setLeads(getAdminLeads());
     } finally {
       setIsSyncingCloud(false);
     }
   };
+
 
   const handleDeleteLead = (id: string) => {
     const updated = leads.filter(l => l.id !== id);
@@ -95,17 +146,15 @@ export default function AdminDatabaseModal({ isOpen, onClose }: AdminDatabaseMod
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-white/10 bg-slate-900/60 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md">
-              <ShieldCheck className="w-5 h-5 text-white" />
-            </div>
+            <DiaVetLogo size="sm" variant="developer" />
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-black text-white">
                   DiaVet — Base de Données Cloud & Inbox
                 </h2>
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1">
                   <Database className="w-2.5 h-2.5" />
-                  Firestore Actif
+                  Console Dev Pro
                 </span>
               </div>
               <p className="text-xs text-slate-400">
@@ -269,6 +318,27 @@ export default function AdminDatabaseModal({ isOpen, onClose }: AdminDatabaseMod
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>JSON</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    soundEngine.playCyberClick();
+                    const status = getNotificationPermissionStatus();
+                    if (status !== 'granted') {
+                      await requestPushNotificationPermission('vet', { userName: 'Admin DiaVet', wilaya: '16 - Alger' });
+                    }
+                    soundEngine.playCelebration();
+                    dispatchNativePushNotification("🔔 Test Notification Push Développeur", {
+                      body: "Le canal de notification instantanée DiaVet est connecté et opérationnel à 100% !",
+                      icon: '/pwa-192x192.png',
+                      tag: 'admin-test-notif'
+                    });
+                  }}
+                  title="Tester et activer les notifications push sur votre appareil"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs cursor-pointer transition-colors"
+                >
+                  <Bell className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                  <span>Activer/Tester Push</span>
                 </button>
               </div>
             </div>

@@ -11,7 +11,9 @@
     <title>DiaVet Algérie — La Plateforme Unifiée de Santé Animale 🇩🇿</title>
     <meta name="description" content="Plateforme numérique vétérinaire pour l'Algérie connectant propriétaires et vétérinaires avec carnet de santé, système de badges et jalons santé, articles et conseils cliniques, et annuaire d'urgences." />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
     <script>
       // Load saved theme immediately to prevent white/dark flash
       try {
@@ -27,11 +29,13 @@
         }
       } catch (e) {}
 
-      // Automatically clean any legacy or intercepting service workers and caches
+      // Ensure FCM and PWA service workers can register cleanly
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for (var i = 0; i < registrations.length; i++) {
-            registrations[i].unregister();
+            if (registrations[i].active && registrations[i].active.scriptURL && !registrations[i].active.scriptURL.includes('firebase-messaging-sw')) {
+              registrations[i].unregister();
+            }
           }
         });
       }

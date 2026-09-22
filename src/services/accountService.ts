@@ -1,5 +1,6 @@
 import { UserProfile } from '../types';
 import { recordRegistrationLead } from './adminDb';
+import { syncRegisteredAccountToFirestore } from './firebase';
 
 export interface RegisteredAccount {
   id: string;
@@ -283,6 +284,9 @@ export function verifyEmailCode(
     }
   } catch {}
 
+  // Sync account to Firestore in background
+  syncRegisteredAccountToFirestore(newAccount).catch(err => console.warn('[Account] Firestore sync warning:', err));
+
   // Record in lead registry for Excel exports
   recordRegistrationLead(
     {
@@ -304,3 +308,50 @@ export function verifyEmailCode(
     account: newAccount
   };
 }
+
+/**
+ * Merge cloud accounts into local account cache
+ */
+export function mergeCloudAccounts(cloudAccounts: any[]): RegisteredAccount[] {
+  const localAccounts = getRegisteredAccounts();
+  const accountMap = new Map<string, RegisteredAccount>();
+
+  for (const acc of cloudAccounts) {
+    if (acc && acc.email) {
+      const email = String(acc.email).toLowerCase();
+      accountMap.set(email, {
+        id: acc.id || `cloud-${email}`,
+        email: email,
+        fullName: acc.fullName || acc.name || 'Membre DiaVet',
+        phone: acc.phone || '0550000000',
+        wilaya: acc.wilaya || '16 - Alger',
+        commune: acc.commune || 'Centre',
+        role: acc.role || 'owner',
+        passwordHash: acc.passwordHash || '',
+        petName: acc.petName,
+        petType: acc.petType,
+        petBreed: acc.petBreed,
+        clinicName: acc.clinicName,
+        orderNumber: acc.orderNumber,
+        isEmailVerified: acc.isEmailVerified !== undefined ? acc.isEmailVerified : true,
+        vipCode: acc.vipCode || `DZ-VIP-${Math.floor(100000 + Math.random() * 900000)}`,
+        points: acc.points || 150,
+        registeredAt: acc.registeredAt || new Date().toLocaleString('fr-DZ'),
+        verifiedAt: acc.verifiedAt || new Date().toLocaleString('fr-DZ'),
+      });
+      registerEmailInGlobalList(email);
+    }
+  }
+
+  for (const acc of localAccounts) {
+    const email = acc.email.toLowerCase();
+    if (!accountMap.has(email)) {
+      accountMap.set(email, acc);
+    }
+  }
+
+  const merged = Array.from(accountMap.values());
+  saveRegisteredAccounts(merged);
+  return merged;
+}
+

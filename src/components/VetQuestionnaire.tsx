@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Language, VetAnswers, UserProfile } from '../types';
+import { Language, VetAnswers, UserProfile, AppScreen } from '../types';
 import { translations } from '../data/translations';
 import { ALGERIAN_WILAYAS, CLINIC_PHOTOS } from '../data/mockData';
 import { recordVetSubmission, generateVipCode } from '../services/adminDb';
@@ -9,10 +9,12 @@ import { motion } from 'motion/react';
 import { 
   ChevronLeft, ArrowRight, Clock, Sparkles, 
   ShieldCheck, QrCode, Stethoscope, CheckCircle2, 
-  AlertCircle, Lightbulb, Check, Camera
+  AlertCircle, Lightbulb, Check, Camera,
+  Heart, ShoppingBag, BookOpen, Tv, User, Award, Mail, Building2, MapPin
 } from 'lucide-react';
 import DiaVetLogo from './DiaVetLogo';
 import { isValidAlgerianPhone } from '../lib/validation';
+import MagicEnvelopeModal from './MagicEnvelopeModal';
 
 interface VetQuestionnaireProps {
   currentLang: Language;
@@ -20,6 +22,8 @@ interface VetQuestionnaireProps {
   onFinish: (answers: VetAnswers) => void;
   onGoHome: () => void;
   onPreviewPortal: () => void;
+  onNavigateToScreen?: (screen: AppScreen) => void;
+  onOpenProfile?: () => void;
 }
 
 const VET_DRAFT_STORAGE_KEY = 'diavet_vet_questionnaire_draft_v1';
@@ -29,10 +33,13 @@ export default function VetQuestionnaire({
   userProfile,
   onFinish,
   onGoHome,
-  onPreviewPortal
+  onPreviewPortal,
+  onNavigateToScreen,
+  onOpenProfile
 }: VetQuestionnaireProps) {
   const t = translations[currentLang] || translations.fr;
   const isRtl = currentLang === 'ar';
+  const [showMagicEnvelope, setShowMagicEnvelope] = useState<boolean>(false);
 
   const getSavedVetDraft = () => {
     try {
@@ -446,13 +453,33 @@ export default function VetQuestionnaire({
     );
   }
 
-  // STEP 9: VIP PRO ACCREDITATION
+  // STEP 9: VIP PRO ACCREDITATION & FULL MODULES ACCESS
   if (step === 9) {
     return (
-      <div className={`max-w-2xl mx-auto px-4 py-8 sm:py-12 animate-in zoom-in-95 duration-500 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="relative rounded-[2.5rem] overflow-hidden border-2 border-emerald-500/50 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-6 sm:p-10 shadow-2xl backdrop-blur-2xl">
+      <div className={`max-w-3xl mx-auto px-4 py-8 sm:py-12 animate-in zoom-in-95 duration-500 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        
+        {/* Magic Envelope Mascot Modal for Veterinarian */}
+        <MagicEnvelopeModal
+          isOpen={showMagicEnvelope}
+          onClose={() => setShowMagicEnvelope(false)}
+          currentLang={currentLang}
+          petName={answers.clinicName || (isRtl ? 'عيادتكم' : 'Votre Clinique')}
+          ownerName={answers.vetFullName || (isRtl ? 'دكتور' : 'Docteur')}
+          vipCode={generatedVip}
+          userRole="vet"
+          onNavigateTo={(screen) => {
+            setShowMagicEnvelope(false);
+            if (onNavigateToScreen) {
+              onNavigateToScreen(screen);
+            } else {
+              onPreviewPortal();
+            }
+          }}
+        />
+
+        <div className="relative rounded-[2.5rem] overflow-hidden border-2 border-emerald-500/50 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-6 sm:p-10 shadow-2xl backdrop-blur-2xl space-y-6">
           
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
               <span className="text-xs font-black uppercase tracking-widest text-emerald-300 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/30">
@@ -470,16 +497,16 @@ export default function VetQuestionnaire({
             )}
           </h1>
           
-          <p className="text-slate-300 text-xs sm:text-sm mt-2 leading-relaxed">
+          <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
             {isRtl ? (
-              <>شكراً <strong>{answers.vetFullName || 'دكتور'}</strong>. عيادتكم <strong>{answers.clinicName}</strong> مدرجة الآن في قائمة الأولوية لدليل الطوارئ والعيادات البيطرية في الجزائر.</>
+              <>شكراً <strong>{answers.vetFullName || 'دكتور'}</strong>. عيادتكم <strong>{answers.clinicName}</strong> مدرجة الآن في قائمة الأولوية لدليل الطوارئ والعيادات البيطرية في الجزائر. تم تفعيل جميع ميزات وأقسام المنصة لحسابكم المهني.</>
             ) : (
-              <>Merci <strong>{answers.vetFullName || 'Docteur'}</strong>. Votre structure <strong>{answers.clinicName}</strong> est désormais référencée en priorité sur la carte des cliniques et urgences vétérinaires en Algérie.</>
+              <>Merci <strong>{answers.vetFullName || 'Docteur'}</strong>. Votre structure <strong>{answers.clinicName}</strong> est désormais référencée en priorité sur la carte des cliniques et urgences en Algérie. Tous les modules de l'écosystème DiaVet sont désormais débloqués pour votre compte.</>
             )}
           </p>
 
           {/* THE PRO PARTNER CARD */}
-          <div className="my-8 p-6 sm:p-8 rounded-3xl bg-gradient-to-tr from-slate-900 via-emerald-950/40 to-slate-900 border-2 border-emerald-500/40 shadow-2xl relative overflow-hidden">
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-tr from-slate-900 via-emerald-950/40 to-slate-900 border-2 border-emerald-500/40 shadow-2xl relative overflow-hidden">
             <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-emerald-500/10 blur-2xl"></div>
 
             <div className="flex items-start justify-between gap-4 mb-6">
@@ -545,23 +572,294 @@ export default function VetQuestionnaire({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-4">
+          {/* DEDICATED SECTIONS HUB FOR VETERINARIANS */}
+          <div className="space-y-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+              <div>
+                <h3 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-emerald-400" />
+                  <span>{isRtl ? "الوصول المباشر لجميع أقسام ومنصات DiaVet" : "Accès Direct à Tous les Espaces DiaVet"}</span>
+                </h3>
+                <p className="text-xs text-slate-300">
+                  {isRtl ? "اختر القسم الذي تود الانتقال إليه الآن (التبني، الدليل، المتجر، المقالات...)" : "Cliquez sur une section pour la visiter immédiatement en tant que praticien partenaire."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playCatMeow();
+                  setShowMagicEnvelope(true);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+              >
+                <span>🐱</span>
+                <span>{isRtl ? "رسالة مفاجأة الترحيب" : "Enveloppe Surprise"}</span>
+              </button>
+            </div>
+
+            {/* Direct Modules Grid for Vets */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+              
+              {/* 1. Adoption Solidaire */}
+              <div
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  if (onNavigateToScreen) {
+                    onNavigateToScreen('adoption');
+                  } else {
+                    onGoHome();
+                  }
+                }}
+                className="p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-rose-500/40 hover:border-rose-400 transition-all cursor-pointer group flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl shrink-0">
+                    <Heart className="w-6 h-6 fill-current" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white group-hover:text-rose-300 transition-colors">
+                      {isRtl ? "التبني التضامني (58 ولاية)" : "Adoption Solidaire DZ"}
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      {isRtl ? "متابعة الحيوانات للتبني ودعم الملاجئ" : "Refuges, sauvetages & fiches d'adoption"}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-emerald-400 font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 shrink-0">
+                  {isRtl ? "متاح 🔓" : "Accès Pro 🔓"}
+                </span>
+              </div>
+
+              {/* 2. Annuaire Vétérinaire & Urgences 24/7 */}
+              <div
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  if (onNavigateToScreen) {
+                    onNavigateToScreen('dz-directory');
+                  } else {
+                    onGoHome();
+                  }
+                }}
+                className="p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-cyan-500/40 hover:border-cyan-400 transition-all cursor-pointer group flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xl shrink-0">
+                    <Building2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white group-hover:text-cyan-300 transition-colors">
+                      {isRtl ? "دليل العيادات والطوارئ 24/7" : "Annuaire National & Urgences"}
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      {isRtl ? "خريطة الأطباء ومناوبات الحراسة" : "Carte interactive des 58 Wilayas"}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-cyan-400 font-bold px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 shrink-0">
+                  {isRtl ? "مُدرج 📍" : "Référencé 📍"}
+                </span>
+              </div>
+
+              {/* 3. Marketplace & Pharmacie */}
+              <div
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  if (onNavigateToScreen) {
+                    onNavigateToScreen('marketplace');
+                  } else {
+                    onGoHome();
+                  }
+                }}
+                className="p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-emerald-500/40 hover:border-emerald-400 transition-all cursor-pointer group flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                    <ShoppingBag className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white group-hover:text-emerald-300 transition-colors">
+                      {isRtl ? "متجر الأدوية والمستلزمات DZD" : "Animalerie & Pharmacie PRO"}
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      {isRtl ? "معدات طبية وتغذية علاجية" : "Matériel, nutrition & consommables"}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-emerald-400 font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 shrink-0">
+                  {isRtl ? "أسعار خاصة 🏷️" : "Tarifs Pro 🏷️"}
+                </span>
+              </div>
+
+              {/* 4. Articles & Conseils Vétérinaires */}
+              <div
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  if (onNavigateToScreen) {
+                    onNavigateToScreen('articles');
+                  } else {
+                    onGoHome();
+                  }
+                }}
+                className="p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-amber-500/40 hover:border-amber-400 transition-all cursor-pointer group flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl shrink-0">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white group-hover:text-amber-300 transition-colors">
+                      {isRtl ? "المقالات والنصائح الطبية" : "Articles & Conseils Pratiques"}
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      {isRtl ? "نشر مقالات وتوعية المربين" : "Publiez et consultez les guides santé"}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-amber-400 font-bold px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 shrink-0">
+                  {isRtl ? "فضاء كاتب ✍️" : "Auteur Agréé ✍️"}
+                </span>
+              </div>
+
+              {/* 5. Boîte à Idées & Confraternité */}
+              <div
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  if (onNavigateToScreen) {
+                    onNavigateToScreen('ideas');
+                  } else {
+                    onGoHome();
+                  }
+                }}
+                className="p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-purple-500/40 hover:border-purple-400 transition-all cursor-pointer group flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xl shrink-0">
+                    <Lightbulb className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white group-hover:text-purple-300 transition-colors">
+                      {isRtl ? "بنك الأفكار والتطوير الطبي" : "Boîte à Idées & Entraide DZ"}
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      {isRtl ? "اقتراح وحدات وميزات لبرنامج DiaVet" : "Votez pour les futures fonctionnalités"}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-purple-400 font-bold px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 shrink-0">
+                  {isRtl ? "+100 XP 💡" : "+100 XP PRO 💡"}
+                </span>
+              </div>
+
+              {/* 6. DiaVet TV & Vidéos */}
+              <div
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  if (onNavigateToScreen) {
+                    onNavigateToScreen('videos');
+                  } else {
+                    onGoHome();
+                  }
+                }}
+                className="p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-red-500/40 hover:border-red-400 transition-all cursor-pointer group flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-xl shrink-0">
+                    <Tv className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white group-hover:text-red-300 transition-colors">
+                      {isRtl ? "تلفزيون DiaVet والوسائط" : "DiaVet TV & Formations Vidéo"}
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      {isRtl ? "فيديوهات توعوية وتقارير بيطرية" : "Tutoriels cliniques & reportages"}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-red-400 font-bold px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 shrink-0">
+                  {isRtl ? "شاهد 📺" : "HD Live 📺"}
+                </span>
+              </div>
+
+              {/* 7. Mon Profil & Badges VIP */}
+              <div
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  if (onOpenProfile) {
+                    onOpenProfile();
+                  } else if (onNavigateToScreen) {
+                    onNavigateToScreen('profile');
+                  } else {
+                    onGoHome();
+                  }
+                }}
+                className="p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-teal-500/40 hover:border-teal-400 transition-all cursor-pointer group flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl shrink-0">
+                    <Award className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-white group-hover:text-teal-300 transition-colors">
+                      {isRtl ? "الملف المهني والشارات" : "Profil Professionnel & Badges"}
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      {isRtl ? "إدارة التوثيق، الرصيد والشارات" : "Gérez vos certifications et points santé"}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-teal-400 font-bold px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 shrink-0">
+                  {isRtl ? "شريك مؤسس ⭐" : "Fondateur ⭐"}
+                </span>
+              </div>
+
+              {/* 8. Portail Clinique & Logiciel DiaVet PRO */}
+              <div
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  onPreviewPortal();
+                }}
+                className="p-4 rounded-2xl bg-emerald-950/60 hover:bg-emerald-950/80 border-2 border-emerald-400 hover:border-emerald-300 transition-all cursor-pointer group flex items-center justify-between shadow-lg shadow-emerald-500/10"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-400 text-slate-950 flex items-center justify-center text-xl shrink-0 font-black">
+                    <Stethoscope className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-emerald-300 group-hover:text-emerald-200 transition-colors">
+                      {isRtl ? "برنامج DiaVet PRO الطبي السحابي" : "Portail Clinique & Ordonnances"}
+                    </h4>
+                    <p className="text-[11px] text-slate-300">
+                      {isRtl ? "إدارة المواعيد، الوصفات وتنبيهات الزبائن" : "File d'attente en direct, Rx & Pharmacie"}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-slate-950 bg-emerald-400 font-black px-2.5 py-1 rounded-lg shrink-0 flex items-center gap-1">
+                  <span>{isRtl ? "فتح البرنامج 🚀" : "Lancer 🚀"}</span>
+                </span>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Primary Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-white/10">
             <button
               onClick={onPreviewPortal}
-              className="w-full sm:flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-extrabold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:flex-1 py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 hover:opacity-95 text-slate-950 font-black text-sm transition-all shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
-              <Stethoscope className="w-4 h-4" />
-              <span>{isRtl ? "معاينة فضاء وبرنامج الطبيب البيطري" : "Aperçu du Portail Clinique PRO"}</span>
+              <Stethoscope className="w-5 h-5" />
+              <span>{isRtl ? "فتح برنامج DiaVet PRO الطبي (المواعيد والوصفات)" : "Ouvrir le Portail Clinique DiaVet PRO"}</span>
             </button>
 
             <button
               onClick={onGoHome}
-              className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-xs border border-white/10 cursor-pointer"
+              className="w-full sm:w-auto py-4 px-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-xs border border-white/10 cursor-pointer"
             >
               {t.navHome}
             </button>
           </div>
+
         </div>
       </div>
     );

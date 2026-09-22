@@ -7,7 +7,33 @@ service cloud.firestore {
       allow read, write: if true;
     }
     
-    // Contact messages to contact@diavet.com / forwarded to mine.mine0100@gmail.com
+    // Registered accounts and user profiles
+    match /registered_accounts/{accountId} {
+      allow read, write: if true;
+    }
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    
+    // Clinical & Health records
+    match /health_records/{recordId} {
+      allow read, write: if true;
+    }
+    
+    // Appointments & Queue
+    match /appointments/{appointmentId} {
+      allow read, write: if true;
+    }
+    
+    // Live Notifications & FCM Push Tokens
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
+    match /fcm_tokens/{tokenId} {
+      allow read, write: if true;
+    }
+    
+    // Contact messages to contact@diavet.dz / forwarded to mine.mine0100@gmail.com
     match /contact_messages/{messageId} {
       allow read, write: if true;
     }
@@ -21,5 +47,11 @@ service cloud.firestore {
     match /adoptions/{adoptionId} {
       allow read, write: if true;
     }
+
+    // Default fallback for nested documents
+    match /{document=**} {
+      allow read, write: if true;
+    }
   }
 }
+

@@ -28,12 +28,18 @@ import GiftRewardCelebrationModal from './components/GiftRewardCelebrationModal'
 import OfficialContactModal from './components/OfficialContactModal';
 import DriveSyncModal from './components/DriveSyncModal';
 import ExcelLeadsModal from './components/ExcelLeadsModal';
+import AdminDatabaseModal from './components/AdminDatabaseModal';
 import DiaVetTvSection from './components/DiaVetTvSection';
 import WhatsAppSupportButton from './components/WhatsAppSupportButton';
 import GentleMusicPlayer from './components/GentleMusicPlayer';
 import ProfileEditModal from './components/ProfileEditModal';
 import WelcomeAiBannerSection from './components/WelcomeAiBannerSection';
-import { recordRegistrationLead } from './services/adminDb';
+import PushNotificationCenter from './components/PushNotificationCenter';
+import PushNotificationPromptBanner from './components/PushNotificationPromptBanner';
+import { listenToForegroundPushNotifications, dispatchNativePushNotification, requestPushNotificationPermission, registerServiceWorkerAuto } from './services/firebaseMessaging';
+import { recordRegistrationLead, fetchAndMergeCloudLeads, mergeCloudSubmissionsIntoLeads, getAdminLeads } from './services/adminDb';
+import { subscribeToSubmissionsFromFirestore, subscribeToRegisteredAccountsFromFirestore } from './services/firebase';
+import { mergeCloudAccounts } from './services/accountService';
 import { translations } from './data/translations';
 import { useLanguage } from './context/LanguageContext';
 import { useLoading } from './context/LoadingContext';
@@ -90,27 +96,54 @@ export default function App() {
   const [activeScreen, setActiveScreen] = useState<AppScreen>('home');
   const [isIphoneView, setIsIphoneView] = useState<boolean>(false);
 
-  // Clean Global Reset: Ensure all users start cleanly disconnected as requested
+  // Check if current session is developer / admin environment
+  const isDevHost = typeof window !== 'undefined' && (
+    window.location.hostname.includes('ais-dev') || 
+    window.location.hostname.includes('localhost') ||
+    window.location.hostname.includes('127.0.0.1')
+  );
+
+  // Clear stale developer flags on visitor domains
+  useEffect(() => {
+    if (!isDevHost && typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('diavet_admin_mode');
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [isDevHost]);
+
+  // User profile state - loaded from localStorage in real-time
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    try {
+      const saved = localStorage.getItem('diavet_user_profile');
+      if (saved) return JSON.parse(saved);
+      return DEFAULT_USER_PROFILE;
+    } catch {
+      return DEFAULT_USER_PROFILE;
+    }
+  });
+
+  // Owner privilege check (1-Click Google Drive tools & Admin tools - reserved for dev host or lead dev email)
+  const isOwner = Boolean(
+    isDevHost ||
+    userProfile.isOwner ||
+    userProfile.email?.toLowerCase().trim() === 'mine.mine0100@gmail.com'
+  );
+
+  // Clean Global Reset for visitors
   const [isRegistered, setIsRegistered] = useState<boolean>(() => {
     try {
-      if (!localStorage.getItem('diavet_clean_reset_v2')) {
-        localStorage.removeItem('diavet_registered');
-        localStorage.removeItem('diavet_completed_questionnaire');
-        localStorage.setItem('diavet_clean_reset_v2', 'true');
-        return false;
-      }
       return localStorage.getItem('diavet_registered') === 'true';
     } catch {
       return false;
     }
   });
 
-  // Auth / Registration Modal state - Direct registration on entry if not registered
+  // Auth / Registration Modal state - opens if user is not registered
   const [showAuthModal, setShowAuthModal] = useState<boolean>(() => {
     try {
-      if (!localStorage.getItem('diavet_clean_reset_v2')) {
-        return true;
-      }
       return localStorage.getItem('diavet_registered') !== 'true';
     } catch {
       return true;
@@ -118,8 +151,9 @@ export default function App() {
   });
 
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [showPushNotificationModal, setShowPushNotificationModal] = useState<boolean>(false);
 
-  // Questionnaire completion status - unlocks adoption, marketplace, ideas, etc.
+  // Questionnaire completion status
   const [hasCompletedQuestionnaire, setHasCompletedQuestionnaire] = useState<boolean>(() => {
     try {
       return localStorage.getItem('diavet_completed_questionnaire') === 'true';
@@ -151,22 +185,6 @@ export default function App() {
     }
   });
 
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
-    try {
-      const saved = localStorage.getItem('diavet_user_profile');
-      return saved ? JSON.parse(saved) : DEFAULT_USER_PROFILE;
-    } catch {
-      return DEFAULT_USER_PROFILE;
-    }
-  });
-
-  // Owner privilege check (1-Click Google Drive tools reserved exclusively for owner email)
-  const isOwner = Boolean(
-    userProfile.email?.toLowerCase().trim() === 'mine.mine0100@gmail.com' ||
-    userProfile.email?.toLowerCase().endsWith('@diavet.dz') ||
-    userProfile.email?.toLowerCase().includes('admin')
-  );
-
   // Articles & Tips State
   const [articles, setArticles] = useState<Article[]>(() => {
     try {
@@ -196,6 +214,8 @@ export default function App() {
   const [showContactModal, setShowContactModal] = useState<boolean>(false);
   const [showDriveSyncModal, setShowDriveSyncModal] = useState<boolean>(false);
   const [showExcelModal, setShowExcelModal] = useState<boolean>(false);
+  const [showAdminDbModal, setShowAdminDbModal] = useState<boolean>(false);
+  const [cloudLeadsCount, setCloudLeadsCount] = useState<number>(() => getAdminLeads().length);
 
   // Sync to localStorage
   useEffect(() => {
@@ -221,6 +241,95 @@ export default function App() {
       localStorage.setItem('diavet_fav_articles', JSON.stringify(favoriteArticleIds));
     } catch {}
   }, [favoriteArticleIds]);
+
+  // Initial cloud merge & Realtime Firestore Live Submissions Sync
+  useEffect(() => {
+    // Automatically register Service Worker for PWA notifications & home screen launcher
+    registerServiceWorkerAuto();
+
+    // Initial fetch and merge
+    fetchAndMergeCloudLeads()
+      .then(merged => {
+        if (merged && merged.length > 0) {
+          setCloudLeadsCount(merged.length);
+        }
+      })
+      .catch(err => console.warn('[App] Initial cloud leads merge notice:', err));
+
+    const knownSubmissionIds = new Set<string>();
+    let isInitialFetchDone = false;
+
+    const unsubSubmissions = subscribeToSubmissionsFromFirestore((submissions) => {
+      if (submissions && submissions.length > 0) {
+        const merged = mergeCloudSubmissionsIntoLeads(submissions);
+        setCloudLeadsCount(merged.length);
+
+        if (isInitialFetchDone) {
+          // Identify any newly added submission
+          for (const item of submissions) {
+            const id = item.id || `${item.name}_${item.phone}`;
+            if (!knownSubmissionIds.has(id)) {
+              knownSubmissionIds.add(id);
+              soundEngine.playCelebration();
+              triggerRewardToast(
+                "✨ Nouvelle Inscription Directe !",
+                `${item.name} (${item.role === 'vet' ? '🩺 Dr. Vétérinaire' : '🐾 Propriétaire'} • ${item.wilaya || 'Algérie'}) vient de s'inscrire.`,
+                '🇩🇿'
+              );
+
+              // Native OS / Browser Push Notification for Developer / Admin
+              dispatchNativePushNotification(
+                "🔔 Nouvelle Inscription DiaVet !",
+                {
+                  body: `${item.name} (${item.role === 'vet' ? 'Vétérinaire PRO' : 'Propriétaire'} - ${item.wilaya || 'Algérie'}) vient de soumettre son dossier.`,
+                  icon: '/pwa-192x192.png',
+                  tag: `submission-${id}`,
+                  actionUrl: '/'
+                }
+              );
+            }
+          }
+        } else {
+          // Initial population
+          submissions.forEach(s => {
+            const id = s.id || `${s.name}_${s.phone}`;
+            knownSubmissionIds.add(id);
+          });
+          isInitialFetchDone = true;
+        }
+      } else {
+        isInitialFetchDone = true;
+      }
+    });
+
+    const unsubAccounts = subscribeToRegisteredAccountsFromFirestore((accounts) => {
+      if (accounts && accounts.length > 0) {
+        mergeCloudAccounts(accounts);
+      }
+    });
+
+    return () => {
+      unsubSubmissions();
+      unsubAccounts();
+    };
+  }, []);
+
+  // Realtime Foreground Push Notifications Listener (FCM / Cloud Firestore Stream)
+  useEffect(() => {
+    const unsubscribe = listenToForegroundPushNotifications((payload) => {
+      soundEngine.playSuccess();
+      triggerRewardToast(
+        payload.title || 'Alerte DiaVet DZ',
+        payload.body || 'Vous avez reçu un nouveau rappel de santé.',
+        '🔔'
+      );
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
 
   // Sync HTML root, body, and meta theme-color
   useEffect(() => {
@@ -473,6 +582,18 @@ export default function App() {
       "Félicitations, vous avez obtenu 100 Points et le statut VIP.",
       '⭐'
     );
+
+    // Native Push Notification for Owner
+    dispatchNativePushNotification(
+      "🎉 Inscription DiaVet Confirmée !",
+      {
+        body: `Félicitations ${answers.ownerName || 'Membre'} ! Votre Pass VIP (${answers.vipCode || 'VIP-DZ'}) et le carnet de santé de ${answers.petName || 'votre animal'} sont activés.`,
+        icon: '/pwa-192x192.png',
+        tag: 'owner-registration-success',
+        actionUrl: '/'
+      }
+    );
+
     setShowCelebrationModal(true);
   };
 
@@ -508,6 +629,18 @@ export default function App() {
       "Félicitations Docteur, votre badge officiel est actif.",
       '🩺'
     );
+
+    // Native Push Notification for Veterinarian
+    dispatchNativePushNotification(
+      "🩺 Accréditation Vétérinaire DiaVet Validée !",
+      {
+        body: `Bienvenue Dr. ${answers.vetFullName || ''} ! Votre ID Convention (${answers.vipPartnerId || 'VET-PRO-DZ'}) et votre accès aux modules sont activés.`,
+        icon: '/pwa-192x192.png',
+        tag: 'vet-registration-success',
+        actionUrl: '/'
+      }
+    );
+
     setShowCelebrationModal(true);
   };
 
@@ -578,6 +711,8 @@ export default function App() {
             onFinish={handleFinishVet}
             onGoHome={() => navigateTo('home')}
             onPreviewPortal={() => navigateTo('vet-portal')}
+            onNavigateToScreen={(scr) => navigateTo(scr)}
+            onOpenProfile={() => navigateTo('profile')}
           />
         );
 
@@ -598,6 +733,8 @@ export default function App() {
             currentLang={currentLang}
             onGoHome={() => navigateTo('home')}
             userAnswers={vetAnswers}
+            onNavigateToScreen={(scr) => navigateTo(scr)}
+            onOpenProfile={() => navigateTo('profile')}
           />
         );
 
@@ -1097,6 +1234,8 @@ export default function App() {
         userName={userProfile.name}
         userPoints={userProfile.points}
         onOpenExcel={() => setShowExcelModal(true)}
+        onOpenAdminDb={() => setShowAdminDbModal(true)}
+        cloudLeadsCount={cloudLeadsCount}
         onLockedFeatureClick={(featureName) => {
           setLockedFeatureName(featureName);
           setShowLockedGiftModal(true);
@@ -1104,11 +1243,13 @@ export default function App() {
         onOpenContact={() => setShowContactModal(true)}
         onOpenDriveSync={() => setShowDriveSyncModal(true)}
         onOpenProfile={() => setShowProfileModal(true)}
+        onOpenPushCenter={() => setShowPushNotificationModal(true)}
         onResetRegistration={handleLogout}
         isRegistered={isRegistered}
         onOpenAuth={() => setShowAuthModal(true)}
         onLogout={handleLogout}
       />
+
 
       {/* IPHONE FRAME SIMULATOR WRAPPER */}
       {isIphoneView ? (
@@ -1214,6 +1355,13 @@ export default function App() {
         currentLang={currentLang}
       />
 
+      {/* CLOUD FIRESTORE ADMIN DATABASE & LIVE INBOX MODAL */}
+      <AdminDatabaseModal
+        isOpen={showAdminDbModal}
+        onClose={() => setShowAdminDbModal(false)}
+      />
+
+
       {/* WHATSAPP SUPPORT FLOAT BUTTON (WAA DZ) */}
       <WhatsAppSupportButton
         currentLang={currentLang}
@@ -1263,6 +1411,23 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* FIREBASE CLOUD MESSAGING (FCM) PUSH NOTIFICATION CENTER */}
+      <PushNotificationCenter
+        isOpen={showPushNotificationModal}
+        onClose={() => setShowPushNotificationModal(false)}
+        currentLang={currentLang}
+        userRole={userProfile.userRole}
+        petName={userProfile.petName || 'Milo'}
+        wilaya={userProfile.wilaya || '16 - Alger'}
+        userName={userProfile.name}
+      />
+
+      {/* INSTANT 1-CLICK PUSH NOTIFICATION ACTIVATION BANNER */}
+      <PushNotificationPromptBanner
+        currentLang={currentLang}
+        onOpenPushCenter={() => setShowPushNotificationModal(true)}
+      />
 
     </div>
   );

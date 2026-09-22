@@ -204,9 +204,9 @@ export default function Footer({ currentLang, userRole = 'owner', onNavigate, on
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
-              <DiaVetLogo size="md" />
+              <DiaVetLogo size="md" variant="visitor" />
               <span className="text-2xl font-black text-white dark:text-white light:text-slate-900 tracking-tight">
-                Dia<span className="text-cyan-400">Vet</span>
+                Dia<span className="text-emerald-400">Vet</span>
               </span>
             </div>
             <p className="text-slate-400 text-xs sm:text-sm max-w-sm leading-relaxed">

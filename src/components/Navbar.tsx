@@ -9,7 +9,7 @@ import {
   Menu, X, Sun, Moon, 
   Award, Heart, ShoppingBag, Lightbulb, 
   FileEdit, Lock, Stethoscope, Cloud,
-  Video, FileSpreadsheet, User, Sparkles, LogOut, Languages
+  Video, FileSpreadsheet, User, Sparkles, LogOut, Languages, Bell, BellRing
 } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
 import DiaVetLogo from './DiaVetLogo';
@@ -38,9 +38,12 @@ interface NavbarProps {
   onOpenProfile?: () => void;
   onOpenContact?: () => void;
   onOpenDriveSync?: () => void;
+  onOpenAdminDb?: () => void;
+  cloudLeadsCount?: number;
   isRegistered?: boolean;
   onOpenAuth?: () => void;
   onLogout?: () => void;
+  onOpenPushCenter?: () => void;
 }
 
 export default function Navbar({
@@ -61,10 +64,14 @@ export default function Navbar({
   onOpenProfile,
   onOpenContact,
   onOpenDriveSync,
+  onOpenAdminDb,
+  cloudLeadsCount,
   isRegistered = false,
   onOpenAuth,
-  onLogout
+  onLogout,
+  onOpenPushCenter
 }: NavbarProps) {
+
   const t = getTranslations(currentLang);
   const isAr = currentLang === 'ar';
   const isEn = currentLang === 'en';
@@ -108,18 +115,18 @@ export default function Navbar({
             }} 
             className="flex items-center gap-2.5 sm:gap-3 group text-left cursor-pointer transition-transform active:scale-95 shrink-0"
           >
-            <DiaVetLogo size="md" />
+            <DiaVetLogo size="md" variant={isOwner ? 'developer' : 'visitor'} />
             <div className="flex flex-col">
               <span className={`text-xl sm:text-2xl font-black tracking-tight transition-colors flex items-center gap-1.5 ${
                 currentTheme === 'light'
-                  ? 'text-slate-950 group-hover:text-cyan-700'
-                  : 'text-white group-hover:text-cyan-300'
+                  ? 'text-slate-950 group-hover:text-emerald-700'
+                  : 'text-white group-hover:text-emerald-300'
               }`}>
                 DiaVet <span className={`text-xs px-2 py-0.5 rounded-full font-bold border ${
-                  currentTheme === 'light'
-                    ? 'bg-cyan-100 text-cyan-800 border-cyan-300'
-                    : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
-                }`}>DZ 🇩🇿</span>
+                  isOwner
+                    ? (currentTheme === 'light' ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-blue-500/20 text-blue-300 border-blue-500/30')
+                    : (currentTheme === 'light' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30')
+                }`}>{isOwner ? 'DEV PRO 🇩🇿' : 'DZ 🇩🇿'}</span>
               </span>
               <span className={`text-[10px] sm:text-xs hidden xs:inline -mt-0.5 font-medium ${
                 currentTheme === 'light' ? 'text-slate-600' : 'text-slate-400'
@@ -329,6 +336,30 @@ export default function Navbar({
               </button>
             )}
 
+            {/* Official Admin Cloud Database / Inscriptions Directes — STRICTLY FOR OWNER */}
+            {isOwner && onOpenAdminDb && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  onOpenAdminDb();
+                }}
+                title="Base de Données Cloud & Inscriptions en Direct (Firebase)"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-2 border-cyan-400/50 shadow-lg shadow-cyan-500/20 transition-all hover:scale-105 shrink-0 cursor-pointer"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="hidden sm:inline">Inscriptions Cloud</span>
+                {typeof cloudLeadsCount === 'number' && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-cyan-400 text-slate-950 text-[10px] font-black">
+                    {cloudLeadsCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* Official Admin Excel Leads & Drive Cloud Sync — STRICTLY FOR OWNER (mine.mine0100@gmail.com) */}
             {isOwner && onOpenExcel && (
               <button
@@ -344,6 +375,7 @@ export default function Navbar({
               </button>
             )}
 
+
             {isOwner && onOpenDriveSync && (
               <button
                 onClick={() => {
@@ -355,6 +387,30 @@ export default function Navbar({
               >
                 <Cloud className="w-3.5 h-3.5 text-blue-400" />
                 <span className="hidden lg:inline">Drive DiaVet</span>
+              </button>
+            )}
+
+            {/* Push Notification Hub Button (Firebase Cloud Messaging) */}
+            {onOpenPushCenter && (
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playCyberClick();
+                  onOpenPushCenter();
+                }}
+                title="Notifications Push FCM & Rappels de Santé"
+                className={`relative p-2 sm:px-2.5 sm:py-1.5 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 shrink-0 ${
+                  currentTheme === 'light'
+                    ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-300'
+                    : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/40 shadow-cyan-500/10'
+                }`}
+              >
+                <Bell className="w-4 h-4 text-cyan-400 animate-pulse" />
+                <span className="hidden xl:inline text-xs font-bold">Push FCM</span>
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border border-slate-950"></span>
+                </span>
               </button>
             )}
 
@@ -862,6 +918,25 @@ export default function Navbar({
                 <span>🇩🇿</span>
                 <span>{isAr ? "دليل 58 ولاية" : isEn ? "58 Wilayas Directory" : "Urgences 58 Wilayas"}</span>
               </button>
+
+              {onOpenPushCenter && (
+                <button
+                  onClick={() => { 
+                    soundEngine.playCyberClick();
+                    setMobileMenuOpen(false); 
+                    onOpenPushCenter(); 
+                  }}
+                  className={`text-left py-2.5 px-3 rounded-xl border font-bold transition-colors flex items-center justify-between cursor-pointer ${
+                    currentTheme === 'light' ? 'bg-cyan-50 text-cyan-900 border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <BellRing className="w-4 h-4 text-cyan-400 animate-pulse" />
+                    <span>🔔 {isAr ? "مركز الإشعارات الفورية (FCM)" : isEn ? "Push Notifications Hub" : "Alertes & Rappels Push (FCM)"}</span>
+                  </div>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                </button>
+              )}
 
               {onOpenContact && (
                 <button
